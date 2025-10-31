@@ -516,7 +516,7 @@ export class UserService {
   }
 
   // Update user profile
-  updateUserProfile(userId: string, updates: { displayName?: string; bio?: string }): boolean {
+  updateUserProfile(userId: string, updates: { displayName?: string; email?: string; bio?: string }): boolean {
     try {
       const user = this.getUserById(userId);
       if (!user) return false;
@@ -528,6 +528,12 @@ export class UserService {
         setClause.push('display_name = ?');
         values.push(updates.displayName);
       }
+
+      if (updates.email !== undefined) {
+        setClause.push('email = ?');
+        values.push(updates.email);
+      }
+
       if (updates.bio !== undefined) {
         setClause.push('bio = ?');
         values.push(updates.bio);

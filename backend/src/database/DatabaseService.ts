@@ -154,7 +154,7 @@ export class DatabaseService {
       return { changes: 0 };
     }
 
-    if(sql.includes('UPDATE users SET display_name') || sql.includes('UPDATE users SET bio')) {
+    if(sql.includes('UPDATE users SET display_name') || sql.includes('UPDATE users SET email') || sql.includes('UPDATE users SET bio')) {
         const users = this.tables.get('users')!;
         const userId = params[params.length - 1];
         const user = users.find(u => u.id === userId);
@@ -163,6 +163,9 @@ export class DatabaseService {
         let paramIndex = 0;
         if (sql.includes('display_name = ?')) {
             user.display_name = params[paramIndex++];
+        }
+        if (sql.includes('email = ?')) {
+            user.email = params[paramIndex++];
         }
         if (sql.includes('bio = ?')) {
             user.bio = params[paramIndex++];
@@ -292,7 +295,6 @@ export class DatabaseService {
     }
 
   public all<T = any>(sql: string, params: any[] = []): T[] {
-    
     const normalizedSql = sql.replace(/\s+/g, ' ').trim();
     console.log('[DB.get] Executing SQL:', normalizedSql, 'with params:', params);
     if (normalizedSql.includes('SELECT * FROM users WHERE is_online = 1')) {

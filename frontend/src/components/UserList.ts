@@ -111,7 +111,7 @@ export class UserList {
             <div class="flex justify-between items-center mb-6">
               <h1 class="text-3xl font-bold text-white">Transcendence Pong</h1>
               <div class="flex items-center space-x-4">
-                <span class="text-green-400">Welcome, ${this.currentUser.username}!</span>
+                <span class="text-green-400">Welcome, ${this.currentUser.displayName || this.currentUser.username}!</span>
                 <button id="profile-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
                   👤 Profile
                 </button>

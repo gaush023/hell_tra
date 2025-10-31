@@ -2,9 +2,9 @@ export interface User {
   id: string;
   username: string;
   password: string;
-  email?: string;
-  displayName?: string;
-  bio?: string;
+  email: string | null;
+  displayName: string | null;
+  bio: string | null;
   avatar?: string;
   isOnline: boolean;
   isInGame: boolean;
@@ -25,7 +25,7 @@ export interface FriendRequest {
   fromUser?: {
     id: string;
     username: string;
-    displayName?: string;
+    displayName: string | null;
     avatar?: string;
   };
 }

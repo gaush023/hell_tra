@@ -148,35 +148,36 @@ export class Profile {
 
   private async saveProfile(): Promise<void> {
     try {
-      const displayName = (document.getElementById('displayName') as HTMLInputElement).value.trim();
-      const email = (document.getElementById('email') as HTMLInputElement).value.trim();
-      const bio = (document.getElementById('bio') as HTMLTextAreaElement).value.trim();
+        const displayName = (document.getElementById('displayName') as HTMLInputElement).value.trim();
+        const email = (document.getElementById('email') as HTMLInputElement).value.trim();
+        const bio = (document.getElementById('bio') as HTMLTextAreaElement).value.trim();
 
-      const updates: any = {};
-      if (displayName !== (this.currentUser.displayName || '')) {
+        const updates: any = {};
+        if (displayName !== (this.currentUser.displayName || '')) {
         updates.displayName = displayName || undefined;
-      }
-      if (email !== (this.currentUser.email || '')) {
+        }
+        if (email !== (this.currentUser.email || '')) {
         updates.email = email || undefined;
-      }
-      if (bio !== (this.currentUser.bio || '')) {
+        }
+        if (bio !== (this.currentUser.bio || '')) {
         updates.bio = bio || undefined;
-      }
+        }
 
-      if (Object.keys(updates).length === 0) {
+        if (Object.keys(updates).length === 0) {
         this.showMessage('No changes to save', 'info');
         return;
-      }
+        }
 
-      const updatedUser = await this.apiService.updateProfile(updates);
+        const updatedUser = await this.apiService.updateProfile(updates);
 
-      // Update current user object
-      Object.assign(this.currentUser, updatedUser);
+        // Update current user object
+        Object.assign(this.currentUser, updatedUser);
 
-      // Update localStorage
-      localStorage.setItem('user', JSON.stringify(this.currentUser));
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(this.currentUser));
 
-      this.showMessage('Profile updated successfully!', 'success');
+        this.showMessage('Profile updated successfully!', 'success');
+
     } catch (error) {
       console.error('Failed to update profile:', error);
       this.showMessage('Failed to update profile. Please try again.', 'error');

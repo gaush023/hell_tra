@@ -7,14 +7,14 @@ interface DatabaseUser {
   id: string;
   username: string;
   password_hash: string;
-  email?: string;
-  display_name?: string;
-  bio?: string;
-  avatar?: string;
+  email: string | null;
+  display_name: string | null;
+  bio: string | null;
+  avatar: string | null;
   is_online: number;
   is_in_game: number;
   created_at: string;
-  last_login_at?: string;
+  last_login_at: string | null;
 }
 
 export class UserService {
@@ -205,8 +205,8 @@ export class UserService {
       id: dbUser.id,
       username: dbUser.username,
       password: '', // Password should not be exposed
-      email: dbUser.email,
-      displayName: dbUser.display_name,
+      email: dbUser.email ?? null,
+      displayName: dbUser.display_name ?? null,
       bio: dbUser.bio,
       avatar: avatar,
       isOnline: dbUser.is_online === 1,
@@ -438,8 +438,8 @@ export class UserService {
       fromUser: {
         id: fromUser.id,
         username: fromUser.username,
-        displayName: fromUser.displayName,
-        avatar: fromUser.avatar
+        displayName: fromUser.displayName ?? null,
+        avatar: fromUser.avatar ?? 'api/avatars/default.svg'
       }
     };
   }
@@ -463,8 +463,8 @@ export class UserService {
         fromUser: {
           id: fromUser.id,
           username: fromUser.username,
-          displayName: fromUser.displayName,
-          avatar: fromUser.avatar
+          displayName: fromUser.displayName ?? null,
+          avatar: fromUser.avatar ?? 'api/avatars/default.svg'
         }
       };
     });

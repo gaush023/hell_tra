@@ -23,7 +23,7 @@ export interface FriendRequest {
   fromUser?: {
     id: string;
     username: string;
-    displayName?: string;
+    displayName?: string | null;
     avatar?: string;
   };
 }

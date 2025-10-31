@@ -30,19 +30,21 @@ export class DatabaseService {
 
   public run(sql: string, params: any[] = []): any {
     // Simplified implementation for basic CRUD operations
-    if (sql.includes('INSERT INTO users')) {
+    const normalizedSql = sql.replace(/\s+/g, ' ').trim();
+    console.log('[DB.run] Executing SQL:', normalizedSql, 'with params:', params);
+    if (normalizedSql.includes('INSERT INTO users')) {
       const users = this.tables.get('users')!;
       const user = {
         id: params[0],
         username: params[1],
         password_hash: params[2],
-        is_online: params[3],
-        is_in_game: params[4],
         created_at: new Date().toISOString(),
         email: null,
         display_name: null,
         bio: null,
         avatar: null,
+        is_online: 0,
+        is_in_game: 0,
         last_login_at: null
       };
       users.push(user);
@@ -152,6 +154,23 @@ export class DatabaseService {
       return { changes: 0 };
     }
 
+    if(sql.includes('UPDATE users SET display_name') || sql.includes('UPDATE users SET bio')) {
+        const users = this.tables.get('users')!;
+        const userId = params[params.length - 1];
+        const user = users.find(u => u.id === userId);
+        if (!user) return { changes: 0 };
+        
+        let paramIndex = 0;
+        if (sql.includes('display_name = ?')) {
+            user.display_name = params[paramIndex++];
+        }
+        if (sql.includes('bio = ?')) {
+            user.bio = params[paramIndex++];
+        }
+        return { changes: 1 };
+    }
+
+
     if (sql.includes('INSERT INTO friend_requests')) {
       const friendRequests = this.tables.get('friend_requests')!;
       const request = {
@@ -213,80 +232,90 @@ export class DatabaseService {
     return { lastInsertRowid: 0, changes: 0 };
   }
 
-  public get<T = any>(sql: string, params: any[] = []): T | undefined {
-    if (sql.includes('SELECT * FROM users WHERE username = ?')) {
-      const users = this.tables.get('users')!;
-      return users.find(u => u.username === params[0]) as T;
+    public get<T = any>(sql: string, params: any[] = []): T | undefined {
+
+    const normalizedSql = sql.replace(/\s+/g, ' ').trim();
+    console.log('[DB.get] Executing SQL:', normalizedSql, 'with params:', params);
+    if (normalizedSql.includes('FROM users') && normalizedSql.includes('WHERE id =')) {
+        const users = this.tables.get('users')!;
+        const user = users.find(u => u.id === params[0]);
+        console.log('[DB.get] SELECT user by id:', params[0], '=>', user);
+        return user as T;
     }
 
-    if (sql.includes('SELECT * FROM users WHERE id = ?')) {
-      const users = this.tables.get('users')!;
-      return users.find(u => u.id === params[0]) as T;
+    if (normalizedSql.includes('FROM users') && normalizedSql.includes('WHERE username =')) {
+        const users = this.tables.get('users')!;
+        const user = users.find(u => u.username === params[0]);
+        console.log('[DB.get] SELECT user by username:', params[0], '=>', user);
+        return user as T;
     }
 
-    if (sql.includes('SELECT password_hash FROM users WHERE username = ?')) {
-      const users = this.tables.get('users')!;
-      const user = users.find(u => u.username === params[0]);
-      return user ? { password_hash: user.password_hash } as T : undefined;
+    if (normalizedSql.includes('SELECT password_hash FROM users WHERE username = ?')) {
+        const users = this.tables.get('users')!;
+        const user = users.find(u => u.username === params[0]);
+        return user ? { password_hash: user.password_hash } as T : undefined;
     }
 
-    if (sql.includes('SELECT * FROM user_stats WHERE user_id = ?')) {
-      const stats = this.tables.get('user_stats')!;
-      return stats.find(s => s.user_id === params[0]) as T;
+    if (normalizedSql.includes('FROM user_stats') && normalizedSql.includes('WHERE user_id =')) {
+        const stats = this.tables.get('user_stats')!;
+        return stats.find(s => s.user_id === params[0]) as T;
     }
 
-    if (sql.includes('SELECT * FROM game_type_stats WHERE user_id = ? AND game_type = ?')) {
-      const gameStats = this.tables.get('game_type_stats')!;
-      return gameStats.find(s => s.user_id === params[0] && s.game_type === params[1]) as T;
+    if (normalizedSql.includes('FROM game_type_stats') && normalizedSql.includes('WHERE user_id =') && normalizedSql.includes('AND game_type =')) {
+        const stats = this.tables.get('game_type_stats')!;
+        const [userId, gameType] = params;
+        return stats.find(s => s.user_id === userId && s.game_type === gameType) as T;
     }
 
-    if (sql.includes('SELECT * FROM friend_requests WHERE from_user_id = ? AND to_user_id = ?')) {
-      const friendRequests = this.tables.get('friend_requests')!;
-      return friendRequests.find(r => r.from_user_id === params[0] && r.to_user_id === params[1]) as T;
+    if (normalizedSql.includes('FROM friend_requests') && normalizedSql.includes('WHERE from_user_id =') && normalizedSql.includes('AND to_user_id =')) {
+        const friendRequests = this.tables.get('friend_requests')!;
+        return friendRequests.find(r => r.from_user_id === params[0] && r.to_user_id === params[1]) as T;
     }
 
-    if (sql.includes('SELECT * FROM friend_requests WHERE id = ? AND to_user_id = ?')) {
-      const friendRequests = this.tables.get('friend_requests')!;
-      return friendRequests.find(r => r.id === params[0] && r.to_user_id === params[1]) as T;
+    if (normalizedSql.includes('FROM friend_requests') && normalizedSql.includes('WHERE id =') && normalizedSql.includes('AND to_user_id =')) {
+        const friendRequests = this.tables.get('friend_requests')!;
+        return friendRequests.find(r => r.id === params[0] && r.to_user_id === params[1]) as T;
     }
 
-    if (sql.includes('SELECT * FROM friendships WHERE')) {
-      const friendships = this.tables.get('friendships')!;
-      // Handle complex friendship queries
-      if (params.length === 4) {
-        // Query: (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)
+    if (normalizedSql.includes('FROM friendships')) {
+        const friendships = this.tables.get('friendships')!;
+        if (params.length === 4) {
         return friendships.find(f =>
-          (f.user_id === params[0] && f.friend_id === params[1]) ||
-          (f.user_id === params[2] && f.friend_id === params[3])
+            (f.user_id === params[0] && f.friend_id === params[1]) ||
+            (f.user_id === params[2] && f.friend_id === params[3])
         ) as T;
-      }
+        }
     }
 
+    console.warn('[DB.get] No matching SQL handler for query:', sql);
     return undefined;
-  }
+    }
 
   public all<T = any>(sql: string, params: any[] = []): T[] {
-    if (sql.includes('SELECT * FROM users WHERE is_online = 1')) {
+    
+    const normalizedSql = sql.replace(/\s+/g, ' ').trim();
+    console.log('[DB.get] Executing SQL:', normalizedSql, 'with params:', params);
+    if (normalizedSql.includes('SELECT * FROM users WHERE is_online = 1')) {
       const users = this.tables.get('users')!;
       return users.filter(u => u.is_online === 1) as T[];
     }
 
-    if (sql.includes('SELECT * FROM users')) {
+    if (normalizedSql.includes('SELECT * FROM users')) {
       const users = this.tables.get('users')!;
       return users as T[];
     }
 
-    if (sql.includes('SELECT * FROM friend_requests WHERE to_user_id = ? AND status = ?')) {
+    if (normalizedSql.includes('SELECT * FROM friend_requests WHERE to_user_id = ? AND status = ?')) {
       const friendRequests = this.tables.get('friend_requests')!;
       return friendRequests.filter(r => r.to_user_id === params[0] && r.status === params[1]) as T[];
     }
 
-    if (sql.includes('SELECT friend_id FROM friendships WHERE user_id = ?')) {
+    if (normalizedSql.includes('SELECT friend_id FROM friendships WHERE user_id = ?')) {
       const friendships = this.tables.get('friendships')!;
       return friendships.filter(f => f.user_id === params[0]) as T[];
     }
 
-    if (sql.includes('SELECT * FROM match_history WHERE player_id = ?')) {
+    if (normalizedSql.includes('SELECT * FROM match_history WHERE player_id = ?')) {
       const matchHistory = this.tables.get('match_history')!;
       const matches = matchHistory.filter(m => m.player_id === params[0]);
       // Sort by date_played DESC and apply LIMIT/OFFSET

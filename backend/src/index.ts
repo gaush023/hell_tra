@@ -11,11 +11,14 @@ import { TankGameService } from './services/TankGameService';
 import { WebSocketService } from './services/WebSocketService';
 import { DatabaseService } from './database/DatabaseService';
 import path from 'path';
+import metrics, { httpRequestsTotal } from './metrics';
+
 
 const fastify = Fastify({
   logger: true
 });
 
+fastify.register(metrics);
 fastify.register(websocket);
 fastify.register(multipart, {
   limits: {
@@ -93,5 +96,15 @@ const start = async () => {
     process.exit(1);
   }
 };
+
+fastify.addHook('onResponse', (request, reply, done) => {
+  httpRequestsTotal.inc({
+    method: request.method,
+    route: request.routerPath || request.url,
+    status_code: reply.statusCode,
+    service: 'backend',
+  });
+  done();
+});
 
 start();

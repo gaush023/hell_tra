@@ -5,6 +5,7 @@ import { GameService } from './GameService';
 import { TankGameService } from './TankGameService';
 import { TournamentService } from './TournamentService';
 import { verifyToken } from '../middleware/auth';
+import { gameMetrics } from '../metrics';
 
 interface SocketConnection {
   socket: WebSocket;
@@ -17,6 +18,18 @@ export class WebSocketService {
   private gameService: GameService;
   private tankGameService: TankGameService;
   private tournamentService: TournamentService;
+  
+  onConnect(client: any) {
+    gameMetrics.playersOnline.inc();
+  }
+
+  onDisconnect(client: any) {
+    gameMetrics.playersOnline.dec();
+  }
+
+  observeLatency(ms: number) {
+    gameMetrics.playerLatency.observe(ms);
+  }
 
   constructor(userService: UserService, gameService: GameService, tankGameService: TankGameService) {
     this.userService = userService;

@@ -18,3 +18,21 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=production
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./devops/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./devops/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus

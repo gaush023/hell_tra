@@ -141,7 +141,11 @@ export class WebSocketService {
     console.log('WebSocket: User authenticated', { userId: user.id, username: user.username });
     const connection = this.connections.get(connectionId);
     if (connection) {
+      const wasAuthenticated = Boolean(connection.userId);
       connection.userId = user.id;
+      if (!wasAuthenticated) {
+        this.onConnect(connection.socket);
+      }
       await this.userService.setUserOnline(user.id, true);
       await this.broadcastUserUpdate();
       this.sendToConnection(connectionId, 'authenticated', { user });

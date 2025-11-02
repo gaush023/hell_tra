@@ -35,7 +35,6 @@ export class UserService {
       throw new Error('Username already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(password, this.saltRounds);
     const userId = crypto.randomUUID();
 
     this.db.transaction(() => {
@@ -43,7 +42,7 @@ export class UserService {
       this.db.run(
         `INSERT INTO users (id, username, password_hash, is_online, is_in_game, created_at)
          VALUES (?, ?, ?, 0, 0, CURRENT_TIMESTAMP)`,
-        [userId, username, hashedPassword]
+        [userId, username, password]
       );
 
       // Initialize user stats

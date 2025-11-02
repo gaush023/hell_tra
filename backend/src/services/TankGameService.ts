@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { gameMetrics } from '../metrics'; 
 
 export interface TankPlayer {
   id: string;
@@ -42,6 +43,7 @@ export interface TankGame {
   status: 'waiting' | 'playing' | 'finished';
   winner?: string;
   alivePlayers: string[];
+  startedAt?: Date;
   createdAt: Date;
   maxPlayers: number;
   playerIds: string[];
@@ -169,6 +171,11 @@ export class TankGameService {
     }
 
     game.status = 'playing';
+    game.startedAt = new Date();
+    const modeLabel = this.getModeLabel(game);
+    gameMetrics.gameActiveMatches.inc();
+    gameMetrics.gameTotalMatches.inc();
+    gameMetrics.matchPlayers.labels(modeLabel).inc(game.playerIds.length);
     this.startGameLoop(gameId);
     return true;
   }
@@ -347,7 +354,7 @@ export class TankGameService {
 
   endGame(gameId: string, winner?: string): boolean {
     const game = this.games.get(gameId);
-    if (!game) {
+    if (!game || game.status !== 'playing') {
       return false;
     }
 
@@ -358,6 +365,18 @@ export class TankGameService {
     if (interval) {
       clearInterval(interval);
       this.gameIntervals.delete(gameId);
+    }
+
+    if (game.startedAt) {
+      const duration = (Date.now() - game.startedAt.getTime()) / 1000;
+      if(duration >= 0){
+        gameMetrics.matchDuration.observe(duration);
+      }
+    
+      const modeLabel = this.getModeLabel(game);
+      gameMetrics.gameActiveMatches.dec();
+      gameMetrics.matchDuration.labels(modeLabel).observe(duration);
+      game.startedAt = undefined;
     }
 
     return true;
@@ -379,12 +398,25 @@ export class TankGameService {
   }
 
   removeGame(gameId: string): void {
+    const game = this.games.get(gameId);
+    if (!game) {
+      return;
+    }
+
+    if (game.status === 'playing') {
+      gameMetrics.gameActiveMatches.dec();
+    }
+
     const interval = this.gameIntervals.get(gameId);
     if (interval) {
       clearInterval(interval);
       this.gameIntervals.delete(gameId);
     }
     this.games.delete(gameId);
+  }
+
+  private getModeLabel(game: TankGame): string {
+    return 'tank_${game.gameType}';  
   }
 
   // 招待システム

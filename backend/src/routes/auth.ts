@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { UserService } from '../services/UserService';
 import { generateToken } from '../middleware/auth';
+import bcrypt from 'bcrypt';
 
 export async function authRoutes(fastify: FastifyInstance) {
   const userService = (fastify as any).userService as UserService;
@@ -16,8 +17,9 @@ export async function authRoutes(fastify: FastifyInstance) {
       if (username.length < 3 || password.length < 6) {
         return reply.code(400).send({ error: 'Username must be at least 3 characters and password at least 6 characters' });
       }
-
-      const user = await userService.createUser(username, password);
+      
+      const hashpass = await bcrypt.hash(password, 10);
+      const user = await userService.createUser(username, hashpass);
       const { password: _, ...userWithoutPassword } = user;
 
       reply.send(userWithoutPassword);

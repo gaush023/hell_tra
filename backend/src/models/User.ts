@@ -101,6 +101,7 @@ export interface Game {
   status: 'waiting' | 'playing' | 'finished';
   winner?: string;
   alivePlayers: string[];
+  startedAt?: Date;
   createdAt: Date;
 }
 

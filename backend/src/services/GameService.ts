@@ -1,6 +1,8 @@
 import { Game, GameInvitation, GamePlayer } from '../models/User';
 import { UserService } from './UserService';
 import crypto from 'crypto';
+import { gameMetrics } from '../metrics';
+
 
 export class GameService {
   private games: Map<string, Game> = new Map();
@@ -9,6 +11,20 @@ export class GameService {
   private waitingRoom4Player: string[] = []; // 4人対戦待機中のプレイヤーID
   private userService: UserService;
 
+  startMatch(matchId: string, mode: string, initialPlayers: number) {
+    gameMetrics.gameTotalMatches.inc();
+    gameMetrics.gameActiveMatches.inc();
+    gameMetrics.matchPlayers.labels(mode).set(initialPlayers);
+  }
+
+  endMatch(matchId: string, mode: string, durationSeconds: number) {
+    gameMetrics.gameActiveMatches.dec();
+    gameMetrics.matchDuration.observe(durationSeconds);
+  }
+
+  playerJoinedMatch(mode: string, newCount: number) {
+    gameMetrics.matchPlayers.labels(mode).set(newCount);
+  }
   constructor(userService: UserService) {
     this.userService = userService;
   }
@@ -110,6 +126,11 @@ export class GameService {
     }
 
     game.status = 'playing';
+    game.startedAt = new Date();
+    const modeLabel　= this.getModeLabel(game);
+    gameMetrics.gameActiveMatches.inc();
+    gameMetrics.gameTotalMatches.inc();
+    gameMetrics.matchPlayers.labels(modeLabel).set(game.playerIds.length);
     this.startGameLoop(gameId);
     return true;
   }
@@ -135,7 +156,7 @@ export class GameService {
 
   endGame(gameId: string, winner?: string): boolean {
     const game = this.games.get(gameId);
-    if (!game) {
+    if (!game || game.status === 'finished') {
       return false;
     }
 
@@ -148,8 +169,21 @@ export class GameService {
       this.gameIntervals.delete(gameId);
     }
 
+    if (game.startedAt) {
+      const durationSeconds = (new Date().getTime() - game.startedAt.getTime()) / 1000;
+      const modeLabel = this.getModeLabel(game);
+      gameMetrics.gameActiveMatches.dec();
+      gameMetrics.matchDuration.observe(durationSeconds);
+      gameMetrics.matchPlayers.labels(modeLabel).set(0);
+    }
+
     return true;
   }
+  
+  private getModeLabel(game: Game): string {
+    return `pong_${game.gameType}`;
+  }
+
 
   private startGameLoop(gameId: string): void {
     const interval = setInterval(() => {

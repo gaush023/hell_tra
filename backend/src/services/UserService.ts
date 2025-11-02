@@ -141,20 +141,17 @@ export class UserService {
     return bcrypt.compare(password, user.password_hash);
   }
 
-  // Simplified authentication method for compatibility
-  authenticateUser(username: string, password: string): User | null {
+  async authenticateUser(username: string, password: string): Promise<User | null> {
+
     const user = this.getUserByUsername(username);
     if (!user) return null;
 
-    // Note: This is synchronous validation - in production you'd want async
-    // For now, we'll validate the hash exists and return the user
-    const dbUser = this.db.get<DatabaseUser>(
-      'SELECT password_hash FROM users WHERE username = ?',
-      [username]
-    );
+    const isValid = await this.validatePassword(username, password);
+    if (!isValid) return null;
 
-    return dbUser ? user : null;
+    return user;
   }
+
 
   private convertDbUserToUser(dbUser: DatabaseUser): User {
     // Get basic stats for this user

@@ -16,27 +16,138 @@
     {
       "type": "stat",
       "title": "Total Requests",
-      "datasource": {
-        "type": "prometheus",
-      },
-      "targets": [{ "expr": "sum(http_requests_total)" }],
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(http_requests_total)"
+        }
+      ],
       "id": 1,
       "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 }
     },
     {
       "type": "time_series",
       "title": "Requests / sec",
-      "datasource": {
-        "type": "prometheus",
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
       },
-      "targets": [{ "expr": "rate(http_requests_total[1m])" }],
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m]))"
+        }
+      ],
       "id": 2,
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 }
+      "gridPos": { "h": 6, "w": 18, "x": 6, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Active Matches",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "game_active_matches"
+        }
+      ],
+      "id": 3,
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 6 }
+    },
+    {
+      "type": "stat",
+      "title": "Players Online",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "players_online"
+        }
+      ],
+      "id": 4,
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 6 }
+    },
+    {
+      "type": "stat",
+      "title": "Total Matches Started",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "game_total_matches"
+        }
+      ],
+      "id": 5,
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 6 }
+    },
+    {
+      "type": "bargauge",
+      "title": "Players per Mode",
+      "datasource": "Prometheus",
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal"
+      },
+      "targets": [
+        {
+          "expr": "sum(match_players) by (mode)",
+          "legendFormat": "{{mode}}"
+        }
+      ],
+      "id": 6,
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 6 }
+    },
+    {
+      "type": "time_series",
+      "title": "Match Duration p95",
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(match_duration_seconds_bucket[5m])) by (le))"
+        }
+      ],
+      "id": 7,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 11 }
+    },
+    {
+      "type": "time_series",
+      "title": "Player Latency p95",
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(player_latency_ms_bucket[5m])) by (le))"
+        }
+      ],
+      "id": 8,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 11 }
+    },
+    {
+      "type": "time_series",
+      "title": "Active Matches Over Time",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "game_active_matches"
+        }
+      ],
+      "id": 9,
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 19 }
     }
   ],
   "schemaVersion": 37,
   "style": "dark",
-  "tags": ["backend"],
-  "title": "NodeJS Backend - Minimal",
-  "version": 2
+  "tags": ["backend", "game"],
+  "title": "NodeJS Backend & Game Monitoring",
+  "version": 3
 }
+

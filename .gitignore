@@ -1,0 +1,25 @@
+ft_transcendence.md
+ft_transcendence.pdf
+review_sheets_old.md
+AGENTS.md
+docs/
+node_modules
+npm-debug.log
+.DS_Store
+dist
+backend/dist
+
+# SQLite database files
+backend/data/
+!backend/data/.gitkeep
+
+# Upload files (except default avatar)
+backend/uploads/avatars/*
+!backend/uploads/avatars/default.svg
+!backend/uploads/avatars/.gitkeep
+
+node_modules/
+frontend/dist/
+frontend/node_modules/
+backend/node_modules/
+backend/dist/

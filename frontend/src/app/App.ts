@@ -5,20 +5,146 @@ import { PongGame } from '../game/PongGame';
 import { TankGame } from '../game/TankGame';
 import { WebSocketService } from '../services/WebSocketService';
 import { User } from '../types/User';
+import { Router } from '../router/Router';
+import { ROUTES, buildRoute } from '../router/routes';
 
 export class App {
   private container: HTMLElement;
   private wsService: WebSocketService;
+  private router: Router;
   private currentUser: User | null = null;
   private currentGame: PongGame | null = null;
   private currentTankGame: TankGame | null = null;
   private tournament: Tournament | null = null;
   private resizeHandler: (() => void) | null = null;
   private inTournament: boolean = false;
+  private currentUserList: UserList | null = null;
 
   constructor() {
     this.container = document.getElementById('app')!;
     this.wsService = new WebSocketService();
+    this.router = new Router();
+    this.setupRoutes();
+  }
+
+  /**
+   * 認証ガード付きのルートをセットアップ
+   */
+  private setupRoutes(): void {
+    // ホーム（ユーザーリスト） - 認証が必要
+    this.router.on(ROUTES.HOME, async () => {
+      if (this.currentUser) {
+        await this.showUserList();
+      } else {
+        this.router.navigate(buildRoute.login());
+      }
+    });
+
+    // ログイン
+    this.router.on(ROUTES.LOGIN, () => {
+      this.showLogin();
+    });
+
+    // ポンゲーム - 認証とgameIdが必要
+    this.router.on(ROUTES.GAME, async (params) => {
+      if (!this.currentUser) {
+        console.warn('Not authenticated, redirecting to login');
+        this.router.navigate(buildRoute.login());
+        return;
+      }
+
+      if (params.id) {
+        // WebSocketイベントからのgameIdを信頼
+        // 手動でアクセスされた場合、ゲームが無効なIDを処理
+        this.startGame(params.id);
+      } else {
+        console.error('Game ID is missing');
+        this.router.navigate(buildRoute.home());
+      }
+    });
+
+    // タンクゲーム - 認証とgameIdが必要
+    this.router.on(ROUTES.TANK_GAME, async (params) => {
+      if (!this.currentUser) {
+        console.warn('Not authenticated, redirecting to login');
+        this.router.navigate(buildRoute.login());
+        return;
+      }
+
+      if (params.id) {
+        this.startTankGame(params.id);
+      } else {
+        console.error('Tank game ID is missing');
+        this.router.navigate(buildRoute.home());
+      }
+    });
+
+    // トーナメント - 認証が必要
+    this.router.on(ROUTES.TOURNAMENT, () => {
+      if (!this.currentUser) {
+        console.warn('Not authenticated, redirecting to login');
+        this.router.navigate(buildRoute.login());
+        return;
+      }
+
+      this.showTournament();
+    });
+
+    // プロフィール - 認証が必要
+    this.router.on(ROUTES.PROFILE, async () => {
+      if (!this.currentUser) {
+        console.warn('Not authenticated, redirecting to login');
+        this.router.navigate(buildRoute.login());
+        return;
+      }
+
+      await this.showUserList();
+      if (this.currentUserList) {
+        this.currentUserList.showProfile();
+      }
+    });
+
+    // フレンド - 認証が必要
+    this.router.on(ROUTES.FRIENDS, async () => {
+      if (!this.currentUser) {
+        console.warn('Not authenticated, redirecting to login');
+        this.router.navigate(buildRoute.login());
+        return;
+      }
+
+      await this.showUserList();
+      if (this.currentUserList) {
+        this.currentUserList.showFriends();
+      }
+    });
+
+    // 試合履歴 - 認証が必要
+    this.router.on(ROUTES.MATCH_HISTORY, async () => {
+      if (!this.currentUser) {
+        console.warn('Not authenticated, redirecting to login');
+        this.router.navigate(buildRoute.login());
+        return;
+      }
+
+      await this.showUserList();
+      if (this.currentUserList) {
+        this.currentUserList.showMatchHistory();
+      }
+    });
+
+    // 統計 - 認証が必要
+    this.router.on(ROUTES.STATS, async () => {
+      if (!this.currentUser) {
+        console.warn('Not authenticated, redirecting to login');
+        this.router.navigate(buildRoute.login());
+        return;
+      }
+
+      await this.showUserList();
+      if (this.currentUserList) {
+        await this.currentUserList.showStats();
+      }
+    });
   }
 
   async init(): Promise<void> {
@@ -27,47 +153,63 @@ export class App {
 
     if (savedUser && token) {
       this.currentUser = JSON.parse(savedUser);
-      await this.showUserList();
-    } else {
-      this.showLogin();
+    }
+
+    // ルーターを初期化（URLに基づいてルーティング開始）
+    this.router.init();
+
+    // 初回アクセス時にハッシュがない場合、デフォルトルートに遷移
+    if (!window.location.hash) {
+      if (this.currentUser) {
+        this.router.navigate(buildRoute.home());
+      } else {
+        this.router.navigate(buildRoute.login());
+      }
     }
   }
 
   private showLogin(): void {
     const loginForm = new LoginForm(this.container, async (user: User) => {
       this.currentUser = user;
-      await this.showUserList();
+      this.router.navigate(buildRoute.home());
     });
     loginForm.render();
   }
 
   private async showUserList(): Promise<void> {
+    // 前回のUserListが存在する場合はクリーンアップ
+    if (this.currentUserList) {
+      this.currentUserList.destroy();
+      this.currentUserList = null;
+    }
+
     try {
       console.log('Attempting to connect to WebSocket...');
       await this.wsService.connect();
       console.log('WebSocket connected successfully');
-      
+
       console.log('Sending authentication token...');
-      this.wsService.send('authenticate', { 
-        token: localStorage.getItem('token') 
+      this.wsService.send('authenticate', {
+        token: localStorage.getItem('token')
       });
 
       console.log('Initializing user list...');
-      const userList = new UserList(
+      this.currentUserList = new UserList(
         this.container,
         this.currentUser!,
         this.wsService,
-        (gameId: string) => this.startGame(gameId),
-        (gameId: string) => this.startTankGame(gameId),
-        () => this.showTournament()
+        (gameId: string) => this.router.navigate(buildRoute.game(gameId)),
+        (gameId: string) => this.router.navigate(buildRoute.tankGame(gameId)),
+        () => this.router.navigate(buildRoute.tournament()),
+        (path: string) => this.router.navigate(path)
       );
-      
-      await userList.init();
+
+      await this.currentUserList.init();
       console.log('User list initialized successfully');
     } catch (error) {
       console.error('Failed to connect to server:', error);
       console.log('Falling back to login screen');
-      this.showLogin();
+      this.router.navigate(buildRoute.login());
     }
   }
 
@@ -100,26 +242,26 @@ export class App {
     `;
 
     const canvas = document.getElementById('game-canvas') as unknown as HTMLCanvasElement;
-    
-    // Set canvas size to match available space
+
+    // 利用可能なスペースに合わせてキャンバスサイズを設定
     const resizeCanvas = () => {
       const container = canvas.parentElement!;
       const containerRect = container.getBoundingClientRect();
-      
-      // Calculate available space (minus padding)
-      const availableWidth = containerRect.width - 32; // 16px padding on each side
+
+      // 利用可能なスペースを計算（パディングを除く）
+      const availableWidth = containerRect.width - 32; // 各辺16pxのパディング
       const availableHeight = containerRect.height - 32;
-      
-      // Maintain aspect ratio (2:1)
+
+      // アスペクト比を維持（2:1）
       const aspectRatio = 2;
       let canvasWidth = availableWidth;
       let canvasHeight = canvasWidth / aspectRatio;
-      
+
       if (canvasHeight > availableHeight) {
         canvasHeight = availableHeight;
         canvasWidth = canvasHeight * aspectRatio;
       }
-      
+
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
     };
@@ -155,7 +297,7 @@ export class App {
       this.currentTankGame = null;
     }
 
-    // Clean up resize event listener
+    // リサイズイベントリスナーをクリーンアップ
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler);
       this.resizeHandler = null;
@@ -168,10 +310,10 @@ export class App {
         this.tournament.returnFromGame();
       } else {
         // トーナメントコンポーネントが存在しない場合は新規作成
-        this.showTournament();
+        this.router.navigate(buildRoute.tournament());
       }
     } else {
-      this.showUserList();
+      this.router.navigate(buildRoute.home());
     }
   }
 
@@ -254,13 +396,13 @@ export class App {
       this.currentTankGame = null;
     }
 
-    // Clean up resize event listener
+    // リサイズイベントリスナーをクリーンアップ
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler);
       this.resizeHandler = null;
     }
 
-    this.showUserList();
+    this.router.navigate(buildRoute.home());
   }
 
   private showTournament(): void {
@@ -279,6 +421,6 @@ export class App {
   private endTournament(): void {
     this.inTournament = false;
     this.tournament = null;
-    this.showUserList();
+    this.router.navigate(buildRoute.home());
   }
 }

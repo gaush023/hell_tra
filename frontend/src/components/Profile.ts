@@ -31,10 +31,10 @@ export class Profile {
               <h2 class="text-xl font-semibold text-white mb-4">Profile Information</h2>
 
                 <div class="space-y-4">
-                  <!-- Avatar Upload Section -->
+                  <!-- アバターアップロードセクション -->
                   <div class="flex flex-col items-center mb-6">
                     <div class="relative mb-4">
-                      <img id="avatar-preview" src="${this.currentUser.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg'}"
+                      <img id="avatar-preview" src="${this.getFullAvatarUrl(this.currentUser.avatar)}"
                            alt="Avatar" class="w-24 h-24 rounded-full object-cover border-4 border-gray-500">
                       <button id="avatar-change-btn" class="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -108,6 +108,12 @@ export class Profile {
     this.attachEventListeners();
   }
 
+  private getFullAvatarUrl(avatar: string | undefined): string {
+    const defaultAvatar = '/api/avatars/default.svg';
+    const avatarUrl = avatar || defaultAvatar;
+    return avatarUrl.startsWith('http') ? avatarUrl : `http://localhost:3001${avatarUrl}`;
+  }
+
   private attachEventListeners(): void {
     const backBtn = document.getElementById('back-btn')!;
     backBtn.addEventListener('click', () => {
@@ -124,7 +130,7 @@ export class Profile {
       this.resetForm();
     });
 
-    // Avatar upload functionality
+    // アバターアップロード機能
     const avatarChangeBtn = document.getElementById('avatar-change-btn')!;
     const avatarInput = document.getElementById('avatar-input') as HTMLInputElement;
     const removeAvatarBtn = document.getElementById('remove-avatar-btn')!;
@@ -170,10 +176,10 @@ export class Profile {
 
         const updatedUser = await this.apiService.updateProfile(updates);
 
-        // Update current user object
+        // 現在のユーザーオブジェクトを更新
         Object.assign(this.currentUser, updatedUser);
 
-        // Update localStorage
+        // localStorageを更新
         localStorage.setItem('user', JSON.stringify(this.currentUser));
 
         this.showMessage('Profile updated successfully!', 'success');
@@ -192,21 +198,21 @@ export class Profile {
 
   private async uploadAvatar(file: File): Promise<void> {
     try {
-      // Validate file type
+      // ファイルタイプを検証
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
         this.showMessage('Please select a JPG or PNG image.', 'error');
         return;
       }
 
-      // Validate file size (5MB limit)
+      // ファイルサイズを検証（5MB制限）
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (file.size > maxSize) {
         this.showMessage('File size must be less than 5MB.', 'error');
         return;
       }
 
-      // Show preview immediately
+      // プレビューをすぐに表示
       const reader = new FileReader();
       reader.onload = (e) => {
         const avatarPreview = document.getElementById('avatar-preview') as HTMLImageElement;
@@ -216,21 +222,21 @@ export class Profile {
       };
       reader.readAsDataURL(file);
 
-      // Get fresh user data before upload
+      // アップロード前に最新のユーザーデータを取得
       console.log('Getting current user data before upload...');
       const currentUserData = await this.apiService.getCurrentUser();
       this.currentUser = currentUserData;
       localStorage.setItem('user', JSON.stringify(this.currentUser));
 
-      // Upload to server
+      // サーバーにアップロード
       console.log('Uploading avatar file:', file.name, file.type, file.size);
       const response = await this.apiService.uploadAvatar(file);
       console.log('Upload response:', response);
 
-      // Update current user
+      // 現在のユーザーを更新
       this.currentUser.avatar = `http://localhost:3001${response.avatarUrl}`;
 
-      // Update localStorage
+      // localStorageを更新
       localStorage.setItem('user', JSON.stringify(this.currentUser));
 
       this.showMessage('Avatar updated successfully!', 'success');
@@ -238,28 +244,28 @@ export class Profile {
       console.error('Failed to upload avatar:', error);
       this.showMessage(`Failed to upload avatar: ${(error as Error).message || 'Unknown error'}`, 'error');
 
-      // Revert preview on error
+      // エラー時はプレビューを元に戻す
       const avatarPreview = document.getElementById('avatar-preview') as HTMLImageElement;
-      avatarPreview.src = this.currentUser.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg';
+      avatarPreview.src = this.getFullAvatarUrl(this.currentUser.avatar);
     }
   }
 
   private async removeAvatar(): Promise<void> {
     try {
-      // Set to default avatar
-      const defaultAvatarUrl = 'http://localhost:3001/api/avatars/avatars/default.svg';
+      // デフォルトアバターに設定
+      const defaultAvatarUrl = this.getFullAvatarUrl(undefined);
 
-      // Update avatar on server
+      // サーバーでアバターを更新
       await this.apiService.updateProfile({ avatar: null });
 
-      // Update UI
+      // UIを更新
       const avatarPreview = document.getElementById('avatar-preview') as HTMLImageElement;
       avatarPreview.src = defaultAvatarUrl;
 
-      // Update current user
-      this.currentUser.avatar = defaultAvatarUrl;
+      // 現在のユーザーを更新
+      this.currentUser.avatar = undefined;
 
-      // Update localStorage
+      // localStorageを更新
       localStorage.setItem('user', JSON.stringify(this.currentUser));
 
       this.showMessage('Avatar removed successfully!', 'success');
@@ -281,7 +287,7 @@ export class Profile {
 
     container.appendChild(messageEl);
 
-    // Auto remove after 3 seconds
+    // 3秒後に自動削除
     setTimeout(() => {
       container.removeChild(messageEl);
     }, 3000);

@@ -9,7 +9,7 @@ import crypto from 'crypto';
 export async function userRoutes(fastify: FastifyInstance) {
   const userService = (fastify as any).userService as UserService;
 
-  // Get online users for the game lobby
+  // ゲームロビー用のオンラインユーザーを取得
   fastify.get('/users', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const users = userService.getOnlineUsers().map((user: any) => {
@@ -22,7 +22,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Get current user profile
+  // 現在のユーザープロフィールを取得
   fastify.get('/users/profile', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const userId = request.user!.id;
@@ -39,7 +39,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Profile update endpoint
+  // プロフィール更新エンドポイント
   fastify.put('/users/profile', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const userId = request.user!.id;
@@ -61,7 +61,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Avatar upload endpoint
+  // アバターアップロードエンドポイント
   fastify.post('/users/avatar', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const userId = request.user!.id;
@@ -82,31 +82,31 @@ export async function userRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: 'No file uploaded' });
       }
 
-      // Validate file type
+      // ファイルタイプを検証
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(fileData.mimetype)) {
         return reply.code(400).send({ error: 'Invalid file type. Only JPG and PNG files are allowed.' });
       }
 
-      // Validate file size (5MB limit)
+      // ファイルサイズを検証（5MB制限）
       const maxSize = 5 * 1024 * 1024; // 5MB
       const buffer = await fileData.toBuffer();
       if (buffer.length > maxSize) {
         return reply.code(400).send({ error: 'File too large. Maximum size is 5MB.' });
       }
 
-      // Generate unique filename
+      // ユニークなファイル名を生成
       const fileExtension = fileData.mimetype === 'image/jpeg' ? 'jpg' : 'png';
       const filename = `${userId}-${crypto.randomUUID()}.${fileExtension}`;
       const uploadPath = path.join(process.cwd(), 'uploads', 'avatars', filename);
 
-      // Ensure uploads directory exists
+      // アップロードディレクトリの存在確認
       const uploadsDir = path.dirname(uploadPath);
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
 
-      // Delete old avatar if exists
+      // 既存のアバターがあれば削除
       const currentUser = userService.getUserById(userId);
       if (currentUser?.avatar && !currentUser.avatar.includes('default.svg')) {
         const oldAvatarPath = path.join(process.cwd(), 'uploads', 'avatars', path.basename(currentUser.avatar));
@@ -115,17 +115,17 @@ export async function userRoutes(fastify: FastifyInstance) {
         }
       }
 
-      // Save file
+      // ファイルを保存
       fs.writeFileSync(uploadPath, buffer);
 
-      // Verify user exists before updating avatar
+      // アバター更新前にユーザーの存在確認
       const user = userService.getUserById(userId);
       if (!user) {
         return reply.code(404).send({ error: 'User not found' });
       }
 
-      // Update user avatar in database
-      const avatarUrl = `/api/avatars/avatars/${filename}`;
+      // データベースのユーザーアバターを更新
+      const avatarUrl = `/api/avatars/${filename}`;
       console.log('Attempting to update avatar URL:', avatarUrl, 'for user:', userId);
       const updateResult = userService.updateUserAvatar(userId, avatarUrl);
       console.log('Update result:', updateResult);
@@ -135,7 +135,7 @@ export async function userRoutes(fastify: FastifyInstance) {
         reply.send({ avatarUrl });
       } else {
         console.error('Failed to update avatar in database');
-        // Clean up uploaded file if database update failed
+        // データベース更新失敗時はアップロードしたファイルを削除
         if (fs.existsSync(uploadPath)) {
           fs.unlinkSync(uploadPath);
         }
@@ -147,7 +147,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Get user by ID
+  // IDでユーザーを取得
   fastify.get('/users/:id', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string };
@@ -164,7 +164,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Basic stats endpoint
+  // 基本統計エンドポイント
   fastify.get('/users/:id/stats', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string };
@@ -180,7 +180,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Placeholder endpoints for frontend compatibility
+  // フロントエンド互換性のためのプレースホルダーエンドポイント
   fastify.get('/users/friends', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const userId = request.user!.id;
@@ -213,18 +213,18 @@ export async function userRoutes(fastify: FastifyInstance) {
 
       const currentUserId = request.user!.id;
 
-      // Check if target user exists
+      // ターゲットユーザーの存在を確認
       const targetUser = userService.getUserById(userId);
       if (!targetUser) {
         return reply.code(404).send({ error: 'User not found' });
       }
 
-      // Check if trying to add self
+      // 自分自身への追加を確認
       if (userId === currentUserId) {
         return reply.code(400).send({ error: 'Cannot send friend request to yourself' });
       }
 
-      // Create and store the friend request
+      // フレンドリクエストを作成して保存
       const friendRequest = userService.createFriendRequest(currentUserId, userId);
       reply.send(friendRequest);
     } catch (error) {
@@ -266,14 +266,14 @@ export async function userRoutes(fastify: FastifyInstance) {
 
       const searchQuery = q.trim().toLowerCase();
 
-      // Get all users and filter by username (case-insensitive partial match)
+      // 全ユーザーを取得してユーザー名でフィルタリング（大文字小文字を区別しない部分一致）
       const allUsers = userService.getAllUsers();
       const searchResults = allUsers
         .filter(user =>
           user.username.toLowerCase().includes(searchQuery) &&
-          user.id !== request.user!.id // Exclude current user
+          user.id !== request.user!.id // 現在のユーザーを除外
         )
-        .slice(0, 10) // Limit to 10 results
+        .slice(0, 10) // 10件に制限
         .map(user => {
           const { password, ...userWithoutPassword } = user;
           return userWithoutPassword;

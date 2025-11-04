@@ -39,21 +39,21 @@ export class UserService {
     const userId = crypto.randomUUID();
 
     this.db.transaction(() => {
-      // Insert user
+      // ユーザーを挿入
       this.db.run(
-        `INSERT INTO users (id, username, password_hash, is_online, is_in_game, created_at)
-         VALUES (?, ?, ?, 0, 0, CURRENT_TIMESTAMP)`,
-        [userId, username, hashedPassword]
+        `INSERT INTO users (id, username, password_hash, avatar, is_online, is_in_game, created_at)
+         VALUES (?, ?, ?, ?, 0, 0, CURRENT_TIMESTAMP)`,
+        [userId, username, hashedPassword, '/api/avatars/default.svg']
       );
 
-      // Initialize user stats
+      // ユーザー統計を初期化
       this.db.run(
         `INSERT INTO user_stats (user_id, total_games, wins, losses, win_rate, tournament_wins, longest_win_streak, current_win_streak)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [userId, 0, 0, 0, 0.0, 0, 0, 0]
       );
 
-      // Initialize game type stats
+      // ゲームタイプ別統計を初期化
       this.db.run(
         `INSERT INTO game_type_stats (id, user_id, game_type, games_played, wins, losses, win_rate, average_game_duration, best_score)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -172,7 +172,7 @@ export class UserService {
       current_win_streak: 0
     };
 
-    // Set default avatar if none exists
+    // デフォルトアバターが存在しない場合は設定
     const avatar = dbUser.avatar || '/api/avatars/default.svg';
 
     const pongStatsRow = this.db.get<any>(
@@ -439,7 +439,7 @@ export class UserService {
         id: fromUser.id,
         username: fromUser.username,
         displayName: fromUser.displayName ?? null,
-        avatar: fromUser.avatar ?? 'api/avatars/default.svg'
+        avatar: fromUser.avatar ?? '/api/avatars/default.svg'
       }
     };
   }

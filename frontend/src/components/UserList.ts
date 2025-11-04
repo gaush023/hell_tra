@@ -232,10 +232,11 @@ export class UserList {
     }).map(friend => {
       // フレンドデータとオンラインステータスをマージし、フレンドのアバターを優先
       const onlineUser = this.users.find(user => user.id === friend.id);
+      const avatarUrl = onlineUser?.avatar || friend.avatar || '/api/avatars/default.svg';
       return {
         ...friend,
         ...onlineUser,
-        avatar: onlineUser?.avatar || friend.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg'
+        avatar: avatarUrl.startsWith('http') ? avatarUrl : `http://localhost:3001${avatarUrl}`
       };
     });
 
@@ -248,7 +249,7 @@ export class UserList {
       <div class="flex items-center justify-between bg-gray-600 p-3 rounded">
         <div class="flex items-center space-x-3">
           <div class="relative">
-            <img src="${friend.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg'}"
+            <img src="${friend.avatar}"
                  alt="${friend.username}"
                  class="w-8 h-8 rounded-full object-cover border-2 border-gray-400">
             <div class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${friend.isOnline ? 'bg-green-500' : 'bg-gray-500'} border-2 border-gray-600"></div>

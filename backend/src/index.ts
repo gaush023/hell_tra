@@ -23,21 +23,21 @@ fastify.register(multipart, {
   }
 });
 
-// Serve static files for avatar uploads
+// アバターアップロード用の静的ファイル配信
 fastify.register(staticFiles, {
-  root: path.join(process.cwd(), 'uploads'),
+  root: path.join(process.cwd(), 'uploads', 'avatars'),
   prefix: '/api/avatars/',
   decorateReply: false
 });
 
-// Add CORS support globally
+// グローバルにCORSサポートを追加
 fastify.addHook('onRequest', async (request, reply) => {
   reply.header('Access-Control-Allow-Origin', '*');
   reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 });
 
-// Handle OPTIONS requests globally
+// OPTIONSリクエストをグローバルに処理
 fastify.addHook('preHandler', async (request, reply) => {
   if (request.method === 'OPTIONS') {
     reply.code(200).send();
@@ -45,7 +45,7 @@ fastify.addHook('preHandler', async (request, reply) => {
   }
 });
 
-// Initialize database first
+// 最初にデータベースを初期化
 const initializeServer = async () => {
   const db = DatabaseService.getInstance();
   await db.initialize();
@@ -63,7 +63,7 @@ const servicesPromise = initializeServer();
 fastify.register(async function (fastify) {
   const { userService, gameService } = await servicesPromise;
 
-  // Pass userService and gameService to routes
+  // userServiceとgameServiceをルートに渡す
   fastify.decorate('userService', userService);
   fastify.decorate('gameService', gameService);
   

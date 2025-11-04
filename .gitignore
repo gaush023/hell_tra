@@ -7,6 +7,8 @@ node_modules
 npm-debug.log
 .DS_Store
 dist
+backend/dist
 
 # SQLite database files
 backend/data/
+!backend/data/.gitkeep

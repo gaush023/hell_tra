@@ -3,7 +3,7 @@ import { User, GameInvitation, FriendRequest, UserStats, MatchHistory, Leaderboa
 export class ApiService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:3001') {
+  constructor(baseUrl: string = 'https://localhost:3001') {
     this.baseUrl = baseUrl;
   }
 

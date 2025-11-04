@@ -13,6 +13,11 @@ backend/dist
 backend/data/
 !backend/data/.gitkeep
 
+# Upload files (except default avatar)
+backend/uploads/avatars/*
+!backend/uploads/avatars/default.svg
+!backend/uploads/avatars/.gitkeep
+
 node_modules/
 frontend/dist/
 frontend/node_modules/

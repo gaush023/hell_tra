@@ -125,7 +125,7 @@ export async function userRoutes(fastify: FastifyInstance) {
       }
 
       // Update user avatar in database
-      const avatarUrl = `/api/avatars/avatars/${filename}`;
+      const avatarUrl = `/api/avatars/${filename}`;
       console.log('Attempting to update avatar URL:', avatarUrl, 'for user:', userId);
       const updateResult = userService.updateUserAvatar(userId, avatarUrl);
       console.log('Update result:', updateResult);

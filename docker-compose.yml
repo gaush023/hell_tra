@@ -21,3 +21,4 @@ services:
       - DB_PATH=/app/data/database.sqlite
     volumes:
       - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads

@@ -26,6 +26,7 @@ help:
 setup:
 	@echo "Setting up the project..."
 	mkdir -p backend/data
+	mkdir -p backend/uploads/avatars
 	docker-compose up --build -d
 	@echo "Setup complete! Services are running."
 	@echo "Frontend: http://localhost:3000"

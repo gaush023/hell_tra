@@ -41,9 +41,9 @@ export class UserService {
     this.db.transaction(() => {
       // Insert user
       this.db.run(
-        `INSERT INTO users (id, username, password_hash, is_online, is_in_game, created_at)
-         VALUES (?, ?, ?, 0, 0, CURRENT_TIMESTAMP)`,
-        [userId, username, hashedPassword]
+        `INSERT INTO users (id, username, password_hash, avatar, is_online, is_in_game, created_at)
+         VALUES (?, ?, ?, ?, 0, 0, CURRENT_TIMESTAMP)`,
+        [userId, username, hashedPassword, '/api/avatars/default.svg']
       );
 
       // Initialize user stats
@@ -439,7 +439,7 @@ export class UserService {
         id: fromUser.id,
         username: fromUser.username,
         displayName: fromUser.displayName ?? null,
-        avatar: fromUser.avatar ?? 'api/avatars/default.svg'
+        avatar: fromUser.avatar ?? '/api/avatars/default.svg'
       }
     };
   }

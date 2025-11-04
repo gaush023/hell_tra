@@ -34,7 +34,7 @@ export class Profile {
                   <!-- Avatar Upload Section -->
                   <div class="flex flex-col items-center mb-6">
                     <div class="relative mb-4">
-                      <img id="avatar-preview" src="${this.currentUser.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg'}"
+                      <img id="avatar-preview" src="${this.currentUser.avatar || 'http://localhost:3001/api/avatars/default.svg'}"
                            alt="Avatar" class="w-24 h-24 rounded-full object-cover border-4 border-gray-500">
                       <button id="avatar-change-btn" class="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -240,14 +240,14 @@ export class Profile {
 
       // Revert preview on error
       const avatarPreview = document.getElementById('avatar-preview') as HTMLImageElement;
-      avatarPreview.src = this.currentUser.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg';
+      avatarPreview.src = this.currentUser.avatar || 'http://localhost:3001/api/avatars/default.svg';
     }
   }
 
   private async removeAvatar(): Promise<void> {
     try {
       // Set to default avatar
-      const defaultAvatarUrl = 'http://localhost:3001/api/avatars/avatars/default.svg';
+      const defaultAvatarUrl = 'http://localhost:3001/api/avatars/default.svg';
 
       // Update avatar on server
       await this.apiService.updateProfile({ avatar: null });

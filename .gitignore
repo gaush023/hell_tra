@@ -1,0 +1,12 @@
+ft_transcendence.md
+ft_transcendence.pdf
+review_sheets_old.md
+AGENTS.md
+docs/
+node_modules
+npm-debug.log
+.DS_Store
+dist
+
+# SQLite database files
+backend/data/

@@ -16,10 +16,20 @@ export class UserList {
   private onGameStart: (gameId: string) => void;
   private onTankGameStart: (gameId: string) => void;
   private onTournamentStart: () => void;
+  private navigate: (path: string) => void;
   private inQueue4Player: boolean = false;
   private inTankQueue4Player: boolean = false;
+  private listeners: Array<{ event: string; handler: Function }> = [];
 
-  constructor(container: HTMLElement, currentUser: User, wsService: WebSocketService, onGameStart: (gameId: string) => void, onTankGameStart?: (gameId: string) => void, onTournamentStart?: () => void) {
+  constructor(
+    container: HTMLElement,
+    currentUser: User,
+    wsService: WebSocketService,
+    onGameStart: (gameId: string) => void,
+    onTankGameStart: ((gameId: string) => void) | undefined,
+    onTournamentStart: (() => void) | undefined,
+    navigate: (path: string) => void
+  ) {
     this.container = container;
     this.apiService = new ApiService();
     this.wsService = wsService;
@@ -27,6 +37,7 @@ export class UserList {
     this.onGameStart = onGameStart;
     this.onTankGameStart = onTankGameStart || onGameStart;
     this.onTournamentStart = onTournamentStart || (() => {});
+    this.navigate = navigate;
   }
 
   async init(): Promise<void> {
@@ -42,45 +53,55 @@ export class UserList {
   }
 
   private setupWebSocketListeners(): void {
-    this.wsService.on('userUpdate', (users: User[]) => {
+    // リスナーを登録して追跡するヘルパー関数
+    const registerListener = (event: string, handler: Function) => {
+      this.wsService.on(event, handler);
+      this.listeners.push({ event, handler });
+    };
+
+    registerListener('userUpdate', (users: User[]) => {
       this.users = users;
       this.renderFriendsList();
     });
 
-    this.wsService.on('gameInvitation', (invitation: any) => {
+    registerListener('gameInvitation', (invitation: any) => {
       this.showInvitationModal(invitation);
     });
 
-    this.wsService.on('gameStart', (data: { gameId: string }) => {
+    registerListener('gameStart', (data: { gameId: string }) => {
       this.onGameStart(data.gameId);
     });
 
-    this.wsService.on('queueUpdate', (data: { waiting: number; needed: number }) => {
-      const queueInfo = document.getElementById('queue-info')!;
-      queueInfo.textContent = `Waiting for players: ${data.waiting}/4 (${data.needed} more needed)`;
+    registerListener('queueUpdate', (data: { waiting: number; needed: number }) => {
+      const queueInfo = document.getElementById('queue-info');
+      if (queueInfo) {
+        queueInfo.textContent = `Waiting for players: ${data.waiting}/4 (${data.needed} more needed)`;
+      }
     });
 
-    this.wsService.on('leftQueue', () => {
+    registerListener('leftQueue', () => {
       this.inQueue4Player = false;
       this.updateQueueButton();
     });
 
-    // Tank game listeners
-    this.wsService.on('tankGameStart', (data: { gameId: string }) => {
+    // タンクゲームリスナー
+    registerListener('tankGameStart', (data: { gameId: string }) => {
       this.onTankGameStart(data.gameId);
     });
 
-    this.wsService.on('tankGameInvitation', (invitation: any) => {
+    registerListener('tankGameInvitation', (invitation: any) => {
       this.showTankInvitationModal(invitation);
     });
 
-    // 4-player tank queue listeners
-    this.wsService.on('tankQueueUpdate', (data: { waiting: number; needed: number }) => {
-      const queueInfo = document.getElementById('tank-queue-info')!;
-      queueInfo.textContent = `Waiting for players: ${data.waiting}/4 (${data.needed} more needed)`;
+    // 4人タンクゲームキューリスナー
+    registerListener('tankQueueUpdate', (data: { waiting: number; needed: number }) => {
+      const queueInfo = document.getElementById('tank-queue-info');
+      if (queueInfo) {
+        queueInfo.textContent = `Waiting for players: ${data.waiting}/4 (${data.needed} more needed)`;
+      }
     });
 
-    this.wsService.on('leftTankQueue', () => {
+    registerListener('leftTankQueue', () => {
       this.inTankQueue4Player = false;
       this.updateTankQueueButton();
     });
@@ -198,14 +219,18 @@ export class UserList {
   }
 
   private renderFriendsList(): void {
-    const userListContainer = document.getElementById('user-list')!;
+    const userListContainer = document.getElementById('user-list');
+    if (!userListContainer) {
+      console.warn('UserList: user-list container not found, skipping render');
+      return;
+    }
 
-    // Filter friends who are also in the online users list
+    // オンラインユーザーリストに含まれるフレンドをフィルタリング
     const onlineFriends = this.friends.filter(friend => {
       const onlineUser = this.users.find(user => user.id === friend.id);
       return onlineUser && onlineUser.isOnline;
     }).map(friend => {
-      // Merge friend data with online status, preserving friend's avatar if available
+      // フレンドデータとオンラインステータスをマージし、フレンドのアバターを優先
       const onlineUser = this.users.find(user => user.id === friend.id);
       return {
         ...friend,
@@ -253,7 +278,7 @@ export class UserList {
       </div>
     `).join('');
 
-    // Add event listeners to pong challenge buttons
+    // ポンゲームチャレンジボタンにイベントリスナーを追加
     const pongChallengeButtons = document.querySelectorAll('.pong-challenge-btn');
     pongChallengeButtons.forEach(button => {
       button.addEventListener('click', (e) => {
@@ -265,7 +290,7 @@ export class UserList {
       });
     });
 
-    // Add event listeners to tank challenge buttons
+    // タンクゲームチャレンジボタンにイベントリスナーを追加
     const tankChallengeButtons = document.querySelectorAll('.tank-challenge-btn');
     tankChallengeButtons.forEach(button => {
       button.addEventListener('click', (e) => {
@@ -282,27 +307,28 @@ export class UserList {
     const logoutBtn = document.getElementById('logout-btn')!;
     logoutBtn.addEventListener('click', () => {
       localStorage.clear();
+      window.location.hash = '#/login';
       location.reload();
     });
 
     const profileBtn = document.getElementById('profile-btn')!;
     profileBtn.addEventListener('click', () => {
-      this.showProfile();
+      this.navigate('/profile');
     });
 
     const friendsBtn = document.getElementById('friends-btn')!;
     friendsBtn.addEventListener('click', () => {
-      this.showFriends();
+      this.navigate('/friends');
     });
 
     const matchHistoryBtn = document.getElementById('match-history-btn')!;
     matchHistoryBtn.addEventListener('click', () => {
-      this.showMatchHistory();
+      this.navigate('/match-history');
     });
 
     const statsBtn = document.getElementById('stats-btn')!;
-    statsBtn.addEventListener('click', async () => {
-      await this.showStats();
+    statsBtn.addEventListener('click', () => {
+      this.navigate('/stats');
     });
 
     const join4PlayerBtn = document.getElementById('join-4player-queue')!;
@@ -320,7 +346,7 @@ export class UserList {
       }
     });
 
-    // 4-player tank queue button
+    // 4人タンクゲームキューボタン
     const join4PlayerTankBtn = document.getElementById('join-4player-tank-queue')!;
     join4PlayerTankBtn.addEventListener('click', () => {
       if (this.inTankQueue4Player) {
@@ -336,7 +362,7 @@ export class UserList {
       }
     });
 
-    // Tournament mode button
+    // トーナメントモードボタン
     const startTournamentBtn = document.getElementById('start-tournament')!;
     startTournamentBtn.addEventListener('click', () => {
       console.log('Starting tournament mode');
@@ -442,48 +468,61 @@ export class UserList {
     }
   }
 
-  private showProfile(): void {
+  public showProfile(): void {
     const profile = new Profile(this.container, this.currentUser, () => {
-      this.render();
+      this.navigate('/');
     });
     profile.render();
   }
 
-  private showFriends(): void {
+  public showFriends(): void {
     const friends = new Friends(this.container, this.currentUser, () => {
-      this.render();
+      this.navigate('/');
     });
     friends.render();
   }
 
-  private showMatchHistory(): void {
+  public showMatchHistory(): void {
     const matchHistory = new MatchHistory(this.container, this.currentUser, () => {
-      this.render();
+      this.navigate('/');
     });
     matchHistory.render();
   }
 
-  private async showStats(): Promise<void> {
+  public async showStats(): Promise<void> {
     try {
-      // Refresh current user data before showing stats
+      // 統計表示前に現在のユーザーデータを更新
       console.log('Refreshing user data before showing stats...');
       const updatedUser = await this.apiService.getCurrentUser();
       this.currentUser = updatedUser;
 
-      // Update localStorage with fresh user data
+      // localStorageを新しいユーザーデータで更新
       localStorage.setItem('user', JSON.stringify(updatedUser));
 
       const stats = new Stats(this.container, this.currentUser, () => {
-        this.render();
+        this.navigate('/');
       });
       await stats.render();
     } catch (error) {
       console.error('Failed to refresh user data for stats:', error);
-      // Fallback to showing stats with current user data
+      // フォールバック: 現在のユーザーデータで統計を表示
       const stats = new Stats(this.container, this.currentUser, () => {
-        this.render();
+        this.navigate('/');
       });
       await stats.render();
     }
+  }
+
+  /**
+   * コンポーネントが破棄されるときにリソースをクリーンアップ
+   */
+  destroy(): void {
+    // すべてのWebSocketリスナーを削除
+    this.listeners.forEach(({ event, handler }) => {
+      this.wsService.off(event, handler);
+    });
+    this.listeners = [];
+
+    console.log('UserList: Destroyed and cleaned up listeners');
   }
 }

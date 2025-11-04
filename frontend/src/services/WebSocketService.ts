@@ -2,17 +2,37 @@ export class WebSocketService {
   private ws: WebSocket | null = null;
   private url: string;
   private messageHandlers: Map<string, Function[]> = new Map();
+  private connected: boolean = false;
 
   constructor(url: string = 'ws://localhost:3001/ws') {
     this.url = url;
   }
 
+  isConnected(): boolean {
+    return this.connected && this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
+
   connect(): Promise<void> {
+    // Check if already connected
+    if (this.isConnected()) {
+      console.log('WebSocket: Already connected, reusing connection');
+      return Promise.resolve();
+    }
+
+    // Close existing connection if in bad state
+    if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
+      console.log('WebSocket: Closing stale connection');
+      this.ws.close();
+      this.ws = null;
+      this.connected = false;
+    }
+
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = () => {
         console.log('WebSocket connected');
+        this.connected = true;
         resolve();
       };
 
@@ -28,10 +48,12 @@ export class WebSocketService {
       this.ws.onclose = () => {
         console.log('WebSocket disconnected');
         this.ws = null;
+        this.connected = false;
       };
 
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
+        this.connected = false;
         reject(error);
       };
     });
@@ -41,6 +63,7 @@ export class WebSocketService {
     if (this.ws) {
       this.ws.close();
       this.ws = null;
+      this.connected = false;
     }
   }
 

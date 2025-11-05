@@ -7,8 +7,13 @@ if [ ! -d "certs" ]; then
     -keyout certs/localhost.key \
     -out certs/localhost.crt \
     -subj "/CN=localhost"
+
+  sudo security add-trusted-cert \
+    -d \
+    -r trustRoot \
+    -k /Library/Keychains/System.keychain \
+    certs/localhost.crt
+
 else
   echo "=> certs already exist, skipping."
 fi
-
-

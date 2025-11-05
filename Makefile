@@ -2,7 +2,7 @@ certs:
 	./setup.sh
 
 up: certs
-	docker-compose up --build
+	docker-compose up --build  
 
 all: up
 

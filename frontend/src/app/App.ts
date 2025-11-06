@@ -94,7 +94,11 @@ export class App {
   private async showUserList(): Promise<void> {
     try {
       console.log('Attempting to connect to WebSocket...');
-      await this.wsService.connect();
+
+        if(!this.wsService.isConnected()){
+            await this.wsService.connect();
+        }
+
       console.log('WebSocket connected successfully');
       
       console.log('Sending authentication token...');
@@ -315,7 +319,16 @@ export class App {
     this.showUserList();
   }
 
-  private showTournament(): void {
+  private async showTournament(): Promise<void> {
+    
+    if(!this.wsService.isConnected()){
+        await this.wsService.connect();
+        this.wsService.send('authenticate', {
+            token: localStorage.getItem('token') 
+        });
+    }
+
+
     this.inTournament = true;
     this.tournament = new Tournament(
       this.container,

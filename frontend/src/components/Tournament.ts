@@ -474,6 +474,7 @@ export class Tournament {
     if (joinBtn) {
       joinBtn.addEventListener('click', () => {
         console.log('Joining tournament...', this.selectedGameType);
+        history.pushState(null, '', '/tournament');
         this.wsService.send('joinTournament', { gameType: this.selectedGameType });
       });
     }
@@ -482,6 +483,7 @@ export class Tournament {
     if (leaveBtn) {
       leaveBtn.addEventListener('click', () => {
         console.log('Leaving tournament...');
+        history.pushState(null, '', '/users');
         this.wsService.send('leaveTournament', {});
       });
     }
@@ -492,6 +494,7 @@ export class Tournament {
         if (this.queuePosition) {
           this.wsService.send('leaveTournament', {});
         }
+        history.pushState(null, '', '/users');
         this.onExit();
       });
     }

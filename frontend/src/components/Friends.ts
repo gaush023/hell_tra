@@ -222,7 +222,8 @@ export class Friends {
   private attachEventListeners(): void {
     const backBtn = document.getElementById('back-btn')!;
     backBtn.addEventListener('click', () => {
-      this.onBack();
+        history.pushState({}, '', '/users');
+        this.onBack();
     });
 
     const searchBtn = document.getElementById('search-btn')!;

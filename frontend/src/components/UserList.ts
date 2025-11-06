@@ -312,9 +312,10 @@ export class UserList {
 
     const join4PlayerBtn = document.getElementById('join-4player-queue')!;
     join4PlayerBtn.addEventListener('click', () => {
-      history.pushState({}, '', '/4player-queue');
+      history.pushState({}, '', '/4player-queue-pong');
       if (this.inQueue4Player) {
         console.log('Leaving 4-player queue');
+        history.pushState({}, '', '/users');
         this.wsService.send('leaveQueue4Player', {});
         this.inQueue4Player = false;
         this.updateQueueButton();
@@ -329,8 +330,10 @@ export class UserList {
     // 4-player tank queue button
     const join4PlayerTankBtn = document.getElementById('join-4player-tank-queue')!;
     join4PlayerTankBtn.addEventListener('click', () => {
+        history.pushState({}, '', '/4player-queue-tank');
       if (this.inTankQueue4Player) {
         console.log('Leaving 4-player tank queue');
+        history.pushState({}, '', '/users');
         this.wsService.send('leaveTankQueue4Player', {});
         this.inTankQueue4Player = false;
         this.updateTankQueueButton();
@@ -345,6 +348,7 @@ export class UserList {
     // Tournament mode button
     const startTournamentBtn = document.getElementById('start-tournament')!;
     startTournamentBtn.addEventListener('click', () => {
+        history.pushState({}, '', '/tournament');
       console.log('Starting tournament mode');
       this.onTournamentStart();
     });
@@ -461,6 +465,7 @@ export class UserList {
     });
     friends.render();
   }
+
 
   private showMatchHistory(): void {
     const matchHistory = new MatchHistory(this.container, this.currentUser, () => {

@@ -290,6 +290,7 @@ export class Stats {
   private attachEventListeners(): void {
     const backBtn = document.getElementById('back-btn')!;
     backBtn.addEventListener('click', () => {
+        history.pushState({}, '', '/users');
       this.onBack();
     });
 

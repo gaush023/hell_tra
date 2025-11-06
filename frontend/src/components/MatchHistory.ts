@@ -266,7 +266,8 @@ export class MatchHistory {
   private attachEventListeners(): void {
     const backBtn = document.getElementById('back-btn')!;
     backBtn.addEventListener('click', () => {
-      this.onBack();
+        history.pushState({}, '', '/users');
+        this.onBack();
     });
 
     // Filter event listeners

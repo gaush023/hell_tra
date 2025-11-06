@@ -1,14 +1,26 @@
 certs:
 	./setup.sh
 
-up: certs
-	docker-compose up --build  
+# clean build (no cache)
+build:
+	docker-compose build --no-cache
 
-all: up
+# normal build
+build-fast:
+	docker-compose build
+
+up: certs
+	docker-compose up -d
+
+up-rebuild: certs build
+	docker-compose up -d
 
 down:
 	docker-compose down -v
 
-.PHONY: certs up all
+logs:
+	docker-compose logs -f
 
+all: build up
 
+.PHONY: certs build build-fast up up-rebuild down logs

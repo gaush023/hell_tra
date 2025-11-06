@@ -64,24 +64,31 @@ async function userRoutes(fastify) {
         try {
             const userId = request.user.id;
             console.log('Avatar upload request from user:', userId);
-            const data = await request.file();
-            console.log('File data:', data ? 'File received' : 'No file');
-            if (!data) {
+            const parts = request.parts();
+            let fileData = null;
+            for await (const part of parts) {
+                if (part.type === 'file') {
+                    fileData = part;
+                    break;
+                }
+            }
+            console.log('File data:', fileData ? 'File received' : 'No file');
+            if (!fileData) {
                 return reply.code(400).send({ error: 'No file uploaded' });
             }
             // Validate file type
             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-            if (!allowedTypes.includes(data.mimetype)) {
+            if (!allowedTypes.includes(fileData.mimetype)) {
                 return reply.code(400).send({ error: 'Invalid file type. Only JPG and PNG files are allowed.' });
             }
             // Validate file size (5MB limit)
             const maxSize = 5 * 1024 * 1024; // 5MB
-            const buffer = await data.toBuffer();
+            const buffer = await fileData.toBuffer();
             if (buffer.length > maxSize) {
                 return reply.code(400).send({ error: 'File too large. Maximum size is 5MB.' });
             }
             // Generate unique filename
-            const fileExtension = data.mimetype === 'image/jpeg' ? 'jpg' : 'png';
+            const fileExtension = fileData.mimetype === 'image/jpeg' ? 'jpg' : 'png';
             const filename = `${userId}-${crypto_1.default.randomUUID()}.${fileExtension}`;
             const uploadPath = path_1.default.join(process.cwd(), 'uploads', 'avatars', filename);
             // Ensure uploads directory exists
@@ -99,9 +106,16 @@ async function userRoutes(fastify) {
             }
             // Save file
             fs_1.default.writeFileSync(uploadPath, buffer);
+            // Verify user exists before updating avatar
+            const user = userService.getUserById(userId);
+            if (!user) {
+                return reply.code(404).send({ error: 'User not found' });
+            }
             // Update user avatar in database
             const avatarUrl = `/api/avatars/avatars/${filename}`;
+            console.log('Attempting to update avatar URL:', avatarUrl, 'for user:', userId);
             const updateResult = userService.updateUserAvatar(userId, avatarUrl);
+            console.log('Update result:', updateResult);
             if (updateResult) {
                 console.log('Avatar uploaded successfully:', avatarUrl);
                 reply.send({ avatarUrl });
@@ -242,7 +256,20 @@ async function userRoutes(fastify) {
         }
     });
     fastify.get('/users/:id/matches', { preHandler: auth_1.authenticate }, async (request, reply) => {
-        reply.send([]);
+        try {
+            const { id } = request.params;
+            const { limit = 20, offset = 0 } = request.query;
+            const user = userService.getUserById(id);
+            if (!user) {
+                return reply.code(404).send({ error: 'User not found' });
+            }
+            const matches = userService.getMatchHistory(id, Number(limit), Number(offset));
+            reply.send(matches);
+        }
+        catch (error) {
+            console.error('Get match history error:', error);
+            reply.code(500).send({ error: 'Internal server error' });
+        }
     });
     fastify.get('/leaderboard', { preHandler: auth_1.authenticate }, async (request, reply) => {
         reply.send([]);

@@ -15,5 +15,6 @@ export declare class DatabaseService {
     insert(table: string, data: Record<string, any>): string;
     update(table: string, data: Record<string, any>, where: string, whereParams?: any[]): number;
     delete(table: string, where: string, params?: any[]): number;
+    debugTable(tableName: string): any[];
 }
 //# sourceMappingURL=DatabaseService.d.ts.map

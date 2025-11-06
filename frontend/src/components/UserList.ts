@@ -19,7 +19,7 @@ export class UserList {
   private inQueue4Player: boolean = false;
   private inTankQueue4Player: boolean = false;
 
-  constructor(container: HTMLElement, currentUser: User, wsService: WebSocketService, onGameStart: (gameId: string) => void, onTankGameStart?: (gameId: string) => void, onTournamentStart?: () => void) {
+  constructor(container: HTMLElement, currentUser: User, wsService: WebSocketService, onGameStart: (gameId: string) => void, onTankGameStart?: (gameId: string) => void, onTournamentStart?: () => void, private onLogout: () => void = () => {}) {
     this.container = container;
     this.apiService = new ApiService();
     this.wsService = wsService;
@@ -210,7 +210,7 @@ export class UserList {
       return {
         ...friend,
         ...onlineUser,
-        avatar: onlineUser?.avatar || friend.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg'
+        avatar: onlineUser?.avatar || friend.avatar || '/api/avatars/avatars/default.svg'
       };
     });
 
@@ -223,7 +223,7 @@ export class UserList {
       <div class="flex items-center justify-between bg-gray-600 p-3 rounded">
         <div class="flex items-center space-x-3">
           <div class="relative">
-            <img src="${friend.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg'}"
+            <img src="${friend.avatar || 'api/avatars/avatars/default.svg'}"
                  alt="${friend.username}"
                  class="w-8 h-8 rounded-full object-cover border-2 border-gray-400">
             <div class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${friend.isOnline ? 'bg-green-500' : 'bg-gray-500'} border-2 border-gray-600"></div>
@@ -279,34 +279,40 @@ export class UserList {
   }
 
   private attachEventListeners(): void {
+    
     const logoutBtn = document.getElementById('logout-btn')!;
     logoutBtn.addEventListener('click', () => {
-      localStorage.clear();
-      location.reload();
+      history.pushState({}, '', '/logout');
+      this.onLogout();
     });
 
     const profileBtn = document.getElementById('profile-btn')!;
     profileBtn.addEventListener('click', () => {
+      history.pushState({}, '', '/profile');
       this.showProfile();
     });
 
     const friendsBtn = document.getElementById('friends-btn')!;
     friendsBtn.addEventListener('click', () => {
+      history.pushState({}, '', '/friends');
       this.showFriends();
     });
 
     const matchHistoryBtn = document.getElementById('match-history-btn')!;
     matchHistoryBtn.addEventListener('click', () => {
+      history.pushState({}, '', '/history');
       this.showMatchHistory();
     });
 
     const statsBtn = document.getElementById('stats-btn')!;
     statsBtn.addEventListener('click', async () => {
+      history.pushState({}, '', '/stats');
       await this.showStats();
     });
 
     const join4PlayerBtn = document.getElementById('join-4player-queue')!;
     join4PlayerBtn.addEventListener('click', () => {
+      history.pushState({}, '', '/4player-queue');
       if (this.inQueue4Player) {
         console.log('Leaving 4-player queue');
         this.wsService.send('leaveQueue4Player', {});

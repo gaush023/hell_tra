@@ -19,8 +19,58 @@ export class App {
   constructor() {
     this.container = document.getElementById('app')!;
     this.wsService = new WebSocketService();
+
+    window.onpopstate = () => {
+      this.handleRoute(location.pathname);
+    }
+  }
+  private navigateTo(path: string): void {
+  history.pushState(null, '', path);
+  this.handleRoute(path);
   }
 
+  public logout(): void {
+    localStorage.clear();
+    this.currentUser = null;
+    this.navigateTo('/login');
+  }
+
+  private handleRoute(path: string): void {
+
+    const staticRoutes: Record<string, () => void> = {
+      '/login': () => this.showLogin(),
+      '/tournament': () => this.showTournament(),
+      '/users': () => this.showUserList(),
+      '/friends': () => this.showUserList(),
+      '/profile': () => this.showUserList(),
+      '/stats': () => this.showUserList(),
+      '/': () => {
+        this.currentUser ? this.showUserList() : this.showLogin();
+      }
+    };
+
+    if (path in staticRoutes) {
+      staticRoutes[path]();
+      return;
+    }
+
+    const dynamicRoutes: Array<[string, (id: string) => void]> = [
+      ['/game/', (id) => this.startGame(id)],
+      ['/tankgame/', (id) => this.startTankGame(id)],
+      ['/tournamentgame/', (id) => this.startGame(id)],
+    ];
+
+    for (const [prefix, handler] of dynamicRoutes) {
+      if (path.startsWith(prefix)) {
+        const id = path.slice(prefix.length);
+        handler(id);
+        return;
+      }
+    }
+
+    // fallback
+    this.showUserList();
+  }
   async init(): Promise<void> {
     const savedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
@@ -36,7 +86,7 @@ export class App {
   private showLogin(): void {
     const loginForm = new LoginForm(this.container, async (user: User) => {
       this.currentUser = user;
-      await this.showUserList();
+      this.navigateTo('/users');
     });
     loginForm.render();
   }
@@ -59,7 +109,8 @@ export class App {
         this.wsService,
         (gameId: string) => this.startGame(gameId),
         (gameId: string) => this.startTankGame(gameId),
-        () => this.showTournament()
+        () => this.showTournament(),
+        () => this.logout()
       );
       
       await userList.init();
@@ -67,11 +118,12 @@ export class App {
     } catch (error) {
       console.error('Failed to connect to server:', error);
       console.log('Falling back to login screen');
-      this.showLogin();
+      this.navigateTo('/login');
     }
   }
 
   private async startGame(gameId: string): Promise<void> {
+    
     this.container.innerHTML = `
       <div class="fixed inset-0 bg-gray-900 flex flex-col">
         <div class="bg-gray-800 p-4 shadow-lg">

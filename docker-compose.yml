@@ -14,7 +14,11 @@ services:
       dockerfile: Dockerfile.backend
     environment:
       - NODE_ENV=production
-  
+    volumes:
+      - dbdata:/data
+    command: sh -c "/usr/local/bin/init_db.sh && npm start"
+    
+
   nginx:
     build:
       context: .
@@ -28,4 +32,6 @@ services:
     depends_on:
       - backend
 
+volumes:
+  dbdata:
 

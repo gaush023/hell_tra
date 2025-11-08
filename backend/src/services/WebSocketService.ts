@@ -25,11 +25,13 @@ export class WebSocketService {
     this.tournamentService = new TournamentService(gameService, tankGameService);
   }
 
-  handleConnection(connection: WebSocket, request: any): void {
+  handleConnection(connection: any, request: any): void {
+    const ws = connection.socket;
+
     const connectionId = this.generateConnectionId();
     this.connections.set(connectionId, { socket: connection });
 
-    connection.on('message', async (message: Buffer) => {
+    ws.on('message', async (message: Buffer) => {
       try {
         const data = JSON.parse(message.toString());
         await this.handleMessage(connectionId, data);
@@ -38,11 +40,11 @@ export class WebSocketService {
       }
     });
 
-    connection.on('close', () => {
+    ws.on('close', () => {
       this.handleDisconnection(connectionId);
     });
 
-    connection.on('error', (error: Error) => {
+    ws.on('error', (error: Error) => {
       console.error('WebSocket error:', error);
       this.handleDisconnection(connectionId);
     });

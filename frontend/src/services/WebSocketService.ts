@@ -3,21 +3,15 @@ export class WebSocketService {
   private url: string;
   private messageHandlers: Map<string, Function[]> = new Map();
 
-  constructor(url: string = 'wss://localhost/ws/') {
+  constructor(url: string = 'wss://localhost/ws') {
     this.url = url;
   }
 
-    public isConnected(): boolean {
-        return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
-    }
-
+  public isConnected(): boolean {
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
+  
   connect(): Promise<void> {
-    
-    if(this.isConnected()) {
-            console.log('WebSocket already connected');
-            return Promise.resolve();
-    }
-
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(this.url);
 
@@ -65,10 +59,6 @@ export class WebSocketService {
       });
     }
   }
-
-    sendHandler(type: string, handler: Function): void {
-        this.messageHandlers.set(type, [handler]);
-    }
 
   on(type: string, handler: Function): void {
     if (!this.messageHandlers.has(type)) {

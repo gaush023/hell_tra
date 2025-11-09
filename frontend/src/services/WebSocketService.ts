@@ -3,7 +3,7 @@ export class WebSocketService {
   private url: string;
   private messageHandlers: Map<string, Function[]> = new Map();
 
-  constructor(url: string = 'wss://localhost/ws/') {
+  constructor(url: string = 'wss://localhost/ws') {
     this.url = url;
   }
 

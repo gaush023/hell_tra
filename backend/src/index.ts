@@ -75,7 +75,7 @@ fastify.register(async function (fastify) {
 fastify.register(async function (fastify) {
   const { webSocketService } = await servicesPromise;
 
-  fastify.get('/ws/', { websocket: true }, (connection, request) => {
+  fastify.get('/ws', { websocket: true }, (connection, request) => {
     webSocketService.handleConnection(connection as any, request);
   });
 });

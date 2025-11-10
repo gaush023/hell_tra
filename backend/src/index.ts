@@ -16,7 +16,6 @@ const fastify = Fastify({
   logger: true
 });
 
-// === plugin register (parent instance) ===
 fastify.register(websocket);
 fastify.register(multipart, {
   limits: {
@@ -24,21 +23,21 @@ fastify.register(multipart, {
   }
 });
 
-// static
+// Serve static files for avatar uploads
 fastify.register(staticFiles, {
   root: path.join(process.cwd(), 'uploads'),
   prefix: '/api/avatars/',
   decorateReply: false
 });
 
-// CORS headers
+// Add CORS support globally
 fastify.addHook('onRequest', async (request, reply) => {
   reply.header('Access-Control-Allow-Origin', '*');
   reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 });
 
-// handle OPTIONS
+// Handle OPTIONS requests globally
 fastify.addHook('preHandler', async (request, reply) => {
   if (request.method === 'OPTIONS') {
     reply.code(200).send();
@@ -46,7 +45,7 @@ fastify.addHook('preHandler', async (request, reply) => {
   }
 });
 
-// ==== DB init ====
+// Initialize database first
 const initializeServer = async () => {
   const db = DatabaseService.getInstance();
   await db.initialize();
@@ -61,25 +60,26 @@ const initializeServer = async () => {
 
 const servicesPromise = initializeServer();
 
-// === WebSocket route must be here (same scope as websocket plugin) ===
-fastify.get('/ws/', { websocket: true }, async (connection, request) => {
-  const { webSocketService } = await servicesPromise;
-  webSocketService.handleConnection(connection as any, request);
-});
-
-// === normal API routes ===
 fastify.register(async function (fastify) {
   const { userService, gameService } = await servicesPromise;
 
+  // Pass userService and gameService to routes
   fastify.decorate('userService', userService);
   fastify.decorate('gameService', gameService);
-
+  
   await fastify.register(authRoutes);
   await fastify.register(userRoutes);
   await fastify.register(gameRoutes);
 });
 
-// health check
+fastify.register(async function (fastify) {
+  const { webSocketService } = await servicesPromise;
+
+  fastify.get('/ws', { websocket: true }, (connection, request) => {
+    webSocketService.handleConnection(connection as any, request);
+  });
+});
+
 fastify.get('/health', async () => {
   return { status: 'OK', timestamp: new Date().toISOString() };
 });

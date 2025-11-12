@@ -58,14 +58,6 @@ export class Profile {
                            placeholder="Enter display name"
                            class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500">
                   </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                    <input type="email" id="email" value="${this.currentUser.email || ''}"
-                           placeholder="Enter email address"
-                           class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500">
-                  </div>
-
                   <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Bio</label>
                     <textarea id="bio" rows="4" placeholder="Tell us about yourself..."
@@ -150,15 +142,11 @@ export class Profile {
   private async saveProfile(): Promise<void> {
     try {
         const displayName = (document.getElementById('displayName') as HTMLInputElement).value.trim();
-        const email = (document.getElementById('email') as HTMLInputElement).value.trim();
         const bio = (document.getElementById('bio') as HTMLTextAreaElement).value.trim();
 
         const updates: any = {};
         if (displayName !== (this.currentUser.displayName || '')) {
         updates.displayName = displayName || undefined;
-        }
-        if (email !== (this.currentUser.email || '')) {
-        updates.email = email || undefined;
         }
         if (bio !== (this.currentUser.bio || '')) {
         updates.bio = bio || undefined;
@@ -187,7 +175,6 @@ export class Profile {
 
   private resetForm(): void {
     (document.getElementById('displayName') as HTMLInputElement).value = this.currentUser.displayName || '';
-    (document.getElementById('email') as HTMLInputElement).value = this.currentUser.email || '';
     (document.getElementById('bio') as HTMLTextAreaElement).value = this.currentUser.bio || '';
   }
 

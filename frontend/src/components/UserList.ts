@@ -348,7 +348,8 @@ export class UserList {
     // Tournament mode button
     const startTournamentBtn = document.getElementById('start-tournament')!;
     startTournamentBtn.addEventListener('click', () => {
-        history.pushState({}, '', '/tournament');
+      this.dispose();
+      history.pushState({}, '', '/tournament');
       console.log('Starting tournament mode');
       this.onTournamentStart();
     });
@@ -486,7 +487,7 @@ export class UserList {
 
       const stats = new Stats(this.container, this.currentUser, () => {
         this.render();
-      });
+      });2
       await stats.render();
     } catch (error) {
       console.error('Failed to refresh user data for stats:', error);
@@ -496,5 +497,17 @@ export class UserList {
       });
       await stats.render();
     }
+  }
+
+  dispose(): void {
+  this.wsService.off('userUpdate');
+  this.wsService.off('gameInvitation');
+  this.wsService.off('gameStart');
+  this.wsService.off('queueUpdate');
+  this.wsService.off('leftQueue');
+  this.wsService.off('tankGameStart');
+  this.wsService.off('tankGameInvitation');
+  this.wsService.off('tankQueueUpdate');
+  this.wsService.off('leftTankQueue');
   }
 }

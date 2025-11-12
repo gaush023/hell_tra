@@ -1,5 +1,6 @@
 import { User, MatchHistory as MatchHistoryItem } from '../types/User';
 import { ApiService } from '../services/ApiService';
+import { sanitize } from '../utils/sanitize';
 
 export class MatchHistory {
   private container: HTMLElement;
@@ -178,7 +179,7 @@ export class MatchHistory {
                 ${match.tournamentId ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded">Tournament</span>' : ''}
               </div>
               <div class="text-sm text-gray-400">
-                vs ${match.opponentNames.join(', ')}
+                vs ${match.opponentNames.map(n => sanitize(n)).join(', ')}
               </div>
               <div class="text-xs text-gray-500">
                 ${this.formatDate(match.datePlayed)} • ${this.formatDuration(match.duration)}

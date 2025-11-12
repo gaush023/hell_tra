@@ -1,5 +1,6 @@
 import { User, UserStats, LeaderboardEntry } from '../types/User';
 import { ApiService } from '../services/ApiService';
+import { sanitize } from '../utils/sanitize';
 
 export class Stats {
   private container: HTMLElement;
@@ -271,8 +272,8 @@ export class Stats {
                     ${entry.user.username.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div class="text-white font-medium ${isCurrentUser ? 'text-blue-400' : ''}">${entry.user.username}</div>
-                    ${entry.user.displayName ? `<div class="text-gray-300 text-sm">${entry.user.displayName}</div>` : ''}
+                    <div class="text-white font-medium ${isCurrentUser ? 'text-blue-400' : ''}">${sanitize(entry.user.username)}</div>
+                    ${entry.user.displayName ? `<div class="text-gray-300 text-sm">${sanitize(entry.user.displayName)}</div>` : ''}
                   </div>
                 </div>
                 <div class="text-right">

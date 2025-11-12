@@ -5,6 +5,7 @@ import { Profile } from './Profile';
 import { Friends } from './Friends';
 import { MatchHistory } from './MatchHistory';
 import { Stats } from './Stats';
+import { sanitize } from '../utils/sanitize';
 
 export class UserList {
   private container: HTMLElement;
@@ -111,7 +112,7 @@ export class UserList {
             <div class="flex justify-between items-center mb-6">
               <h1 class="text-3xl font-bold text-white">Transcendence Pong</h1>
               <div class="flex items-center space-x-4">
-                <span class="text-green-400">Welcome, ${this.currentUser.displayName || this.currentUser.username}!</span>
+                <span class="text-green-400">Welcome, ${sanitize(this.currentUser.displayName || this.currentUser.username)}!</span>
                 <button id="profile-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
                   👤 Profile
                 </button>
@@ -229,8 +230,8 @@ export class UserList {
             <div class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${friend.isOnline ? 'bg-green-500' : 'bg-gray-500'} border-2 border-gray-600"></div>
           </div>
           <div>
-            <span class="text-white font-medium">${friend.username}</span>
-            ${friend.displayName ? `<div class="text-gray-300 text-sm">${friend.displayName}</div>` : ''}
+            <span class="text-white font-medium">${sanitize(friend.username)}</span>
+            ${friend.displayName ? `<div class="text-gray-300 text-sm">${sanitize(friend.displayName)}</div>` : ''}
             ${friend.isInGame ? '<span class="text-yellow-400 text-sm">(In Game)</span>' : ''}
           </div>
         </div>
@@ -487,7 +488,7 @@ export class UserList {
 
       const stats = new Stats(this.container, this.currentUser, () => {
         this.render();
-      });2
+      });
       await stats.render();
     } catch (error) {
       console.error('Failed to refresh user data for stats:', error);

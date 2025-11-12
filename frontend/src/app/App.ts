@@ -346,4 +346,16 @@ export class App {
     this.tournament = null;
     this.showUserList();
   }
+  
+  dispose(): void {
+    this.wsService.off('userUpdate');
+    this.wsService.off('gameInvitation');
+    this.wsService.off('gameStart');
+    this.wsService.off('queueUpdate');
+    this.wsService.off('leftQueue');
+    this.wsService.off('tankGameStart');
+    this.wsService.off('tankGameInvitation');
+    this.wsService.off('tankQueueUpdate');
+    this.wsService.off('leftTankQueue');
+  }
 }

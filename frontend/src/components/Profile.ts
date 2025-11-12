@@ -1,5 +1,6 @@
 import { User } from '../types/User';
 import { ApiService } from '../services/ApiService';
+import { sanitize } from '../utils/sanitize';
 
 export class Profile {
   private container: HTMLElement;
@@ -50,20 +51,20 @@ export class Profile {
                     <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
                     <h2 type="text" id="username" 
                            class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500" readonly>
-                    ${this.currentUser.username}
+                    ${sanitize(this.currentUser.username)}
                     </h2>
                   </div>
 
                   <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Display Name</label>
-                    <input type="text" id="displayName" value="${this.currentUser.displayName || ''}"
+                    <input type="text" id="displayName" value="${sanitize(this.currentUser.displayName || '')}"
                            placeholder="Enter display name"
                            class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500">
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Bio</label>
                     <textarea id="bio" rows="4" placeholder="Tell us about yourself..."
-                              class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500">${this.currentUser.bio || ''}</textarea>
+                              class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500">${sanitize(this.currentUser.bio || '')}</textarea>
                   </div>
 
                   <div class="flex space-x-3">

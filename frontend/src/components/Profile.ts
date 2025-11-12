@@ -34,7 +34,7 @@ export class Profile {
                   <!-- Avatar Upload Section -->
                   <div class="flex flex-col items-center mb-6">
                     <div class="relative mb-4">
-                      <img id="avatar-preview" src="${this.currentUser.avatar || '/api/avatars/avatars/default.svg'}"
+                      <img id="avatar-preview" src="${this.currentUser.avatar || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSPhx1h4J8XLdGimPNC0AkFKTwcf69o31iNWqrcUCU0BohYUHYGhtc-24DMMFRhXJhH3rE5zwkU6OyHHvWlXV7Aqsl66K01mijZqnD8NoCz&s=10'}"
                            alt="Avatar" class="w-24 h-24 rounded-full object-cover border-4 border-gray-500">
                       <button id="avatar-change-btn" class="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -48,8 +48,10 @@ export class Profile {
 
                   <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                    <input type="text" id="username" value="${this.currentUser.username}"
+                    <h2 type="text" id="username" 
                            class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500" readonly>
+                    ${this.currentUser.username}
+                    </h2>
                   </div>
 
                   <div>

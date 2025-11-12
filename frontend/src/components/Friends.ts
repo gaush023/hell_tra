@@ -1,5 +1,6 @@
 import { User, FriendRequest } from '../types/User';
 import { ApiService } from '../services/ApiService';
+import { sanitize } from '../utils/sanitize';
 
 export class Friends {
   private container: HTMLElement;
@@ -110,20 +111,20 @@ export class Friends {
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-3">
             <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-              ${request.fromUser?.username?.charAt(0).toUpperCase() || '?'}
+              ${sanitize(request.fromUser?.username?.charAt(0).toUpperCase() || '?')}
             </div>
             <div>
-              <div class="text-white font-medium">${request.fromUser?.username || 'Unknown'}</div>
-              ${request.fromUser?.displayName ? `<div class="text-gray-300 text-sm">${request.fromUser.displayName}</div>` : ''}
-            </div>
+              <div class="text-white font-medium">${sanitize(request.fromUser?.username || 'Unknown')}</div>
+                ${request.fromUser?.displayName ? `<div class="text-gray-300 text-sm">${sanitize(request.fromUser.displayName)}</div>` : ''}
+              </div>
           </div>
           <div class="flex space-x-2">
             <button class="accept-request bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
-                    data-request-id="${request.id}">
+                    data-request-id="${sanitize(request.id)}">
               Accept
             </button>
             <button class="decline-request bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-                    data-request-id="${request.id}">
+                    data-request-id="${sanitize(request.id)}">
               Decline
             </button>
           </div>
@@ -142,11 +143,11 @@ export class Friends {
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-3">
             <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-              ${friend.username.charAt(0).toUpperCase()}
+              ${sanitize(friend.username.charAt(0).toUpperCase())}
             </div>
             <div>
-              <div class="text-white font-medium">${friend.username}</div>
-              ${friend.displayName ? `<div class="text-gray-300 text-sm">${friend.displayName}</div>` : ''}
+              <div class="text-white font-medium">${sanitize(friend.username)}</div>
+              ${friend.displayName ? `<div class="text-gray-300 text-sm">${sanitize(friend.displayName)}</div>` : ''}
               <div class="flex items-center space-x-2 mt-1">
                 <div class="w-2 h-2 rounded-full ${friend.isOnline ? 'bg-green-500' : 'bg-gray-500'}"></div>
                 <span class="text-xs text-gray-400">${friend.isOnline ? 'Online' : 'Offline'}</span>
@@ -156,11 +157,11 @@ export class Friends {
           </div>
           <div class="flex space-x-2">
             <button class="view-profile bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                    data-user-id="${friend.id}">
+                    data-user-id="${sanitize(friend.id)}">
               Profile
             </button>
             <button class="remove-friend bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-                    data-user-id="${friend.id}">
+                    data-user-id="${sanitize(friend.id)}">
               Remove
             </button>
           </div>
@@ -186,11 +187,11 @@ export class Friends {
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
               <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                ${user.username.charAt(0).toUpperCase()}
+                ${sanitize(user.username.charAt(0).toUpperCase())}
               </div>
               <div>
-                <div class="text-white font-medium">${user.username}</div>
-                ${user.displayName ? `<div class="text-gray-300 text-sm">${user.displayName}</div>` : ''}
+                <div class="text-white font-medium">${sanitize(user.username)}</div>
+                ${user.displayName ? `<div class="text-gray-300 text-sm">${sanitize(user.displayName)}</div>` : ''}
               </div>
             </div>
             <div>
@@ -199,7 +200,7 @@ export class Friends {
                 hasPendingRequest ?
                   '<span class="text-yellow-400 text-sm">Request pending</span>' :
                   `<button class="add-friend bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
-                           data-user-id="${user.id}">
+                           data-user-id="${sanitize(user.id)}">
                      Add Friend
                    </button>`
               }

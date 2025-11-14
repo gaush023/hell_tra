@@ -63,50 +63,54 @@ if [ -z "$SKIP_CERT" ]; then
   # Try mkcert first (recommended for development)
   MKCERT_SUCCESS=false
   if command -v mkcert &> /dev/null; then
-    echo "  📜 Attempting to use mkcert to generate certificates..."
+    echo "  📜 Using mkcert to generate certificates..."
 
-    # Check if mkcert CA directory is writable
-    MKCERT_CA_ROOT=$(mkcert -CAROOT 2>/dev/null || echo "")
+    # Use custom CAROOT to avoid permission issues (no sudo required)
+    export CAROOT="$HOME/.mkcert-local"
+    mkdir -p "$CAROOT"
 
-    if [ -n "$MKCERT_CA_ROOT" ]; then
-      # Check if CA is already installed
-      if [ ! -f "$MKCERT_CA_ROOT/rootCA-key.pem" ]; then
-        echo "  Installing mkcert CA..."
-        if mkcert -install 2>/dev/null; then
-          echo "  ✅ mkcert CA installed successfully"
-        else
-          echo "  ⚠️  Failed to install mkcert CA (permission denied)"
-          echo "  💡 Try running: sudo chown -R $USER:$USER $MKCERT_CA_ROOT"
-          echo "  💡 Or run: CAROOT=\$HOME/.mkcert mkcert -install"
-          echo "  ℹ️  Falling back to OpenSSL..."
-        fi
-      fi
-    fi
+    echo "  ℹ️  Using custom CAROOT: $CAROOT (no sudo required)"
 
-    # Try to generate certificates with mkcert
-    if [ -f "$MKCERT_CA_ROOT/rootCA-key.pem" ] || mkcert -install 2>/dev/null; then
-      # Generate certificates for backend
+    # Install local CA (no sudo required)
+    if mkcert -install 2>/dev/null; then
+      echo "  ✅ mkcert CA installed successfully"
+
+      # Generate certificates directly into backend/certs
       cd ./backend/certs
       if mkcert localhost 127.0.0.1 ::1 2>/dev/null; then
-        mv localhost+2.pem server.crt 2>/dev/null || mv localhost+*.pem server.crt
-        mv localhost+2-key.pem server.key 2>/dev/null || mv localhost+*-key.pem server.key
-        cd ../..
+        # Find generated certificate files (filenames vary)
+        CERT_NAME=$(ls localhost*.pem 2>/dev/null | grep -v 'key' | head -n 1)
+        KEY_NAME=$(ls localhost*-key.pem 2>/dev/null | head -n 1)
 
-        # Create PEM format for backend
-        cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
+        if [ -n "$CERT_NAME" ] && [ -n "$KEY_NAME" ]; then
+          mv "$CERT_NAME" server.crt
+          mv "$KEY_NAME" server.key
+          cd ../..
 
-        # Copy certificates to frontend
-        cp ./backend/certs/server.crt ./frontend/certs/server.crt
-        cp ./backend/certs/server.key ./frontend/certs/server.key
-        cp ./backend/certs/server.pem ./frontend/certs/server.pem
+          # Create PEM format for backend
+          cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
 
-        echo "  ✅ Certificates generated with mkcert"
-        MKCERT_SUCCESS=true
+          # Copy certificates to frontend
+          cp ./backend/certs/server.crt ./frontend/certs/server.crt
+          cp ./backend/certs/server.key ./frontend/certs/server.key
+          cp ./backend/certs/server.pem ./frontend/certs/server.pem
+
+          echo "  ✅ Certificates generated with mkcert (no sudo required)"
+          MKCERT_SUCCESS=true
+        else
+          cd ../.. 2>/dev/null || true
+          echo "  ⚠️  Could not find generated certificate files"
+          echo "  ℹ️  Falling back to OpenSSL..."
+        fi
       else
         cd ../.. 2>/dev/null || true
         echo "  ⚠️  mkcert certificate generation failed"
         echo "  ℹ️  Falling back to OpenSSL..."
       fi
+    else
+      echo "  ⚠️  Failed to install mkcert CA"
+      echo "  💡 Tip: mkcert is using CAROOT=$CAROOT"
+      echo "  ℹ️  Falling back to OpenSSL..."
     fi
   fi
 
@@ -281,9 +285,12 @@ echo "✅ Setup Complete!"
 echo "============================================"
 echo ""
 echo "📁 Generated files:"
-echo "  - ./certs/server.key         (Private key)"
-echo "  - ./certs/server.crt         (Certificate)"
-echo "  - ./certs/server.pem         (Combined PEM)"
+echo "  - backend/certs/server.key   (Backend private key)"
+echo "  - backend/certs/server.crt   (Backend certificate)"
+echo "  - backend/certs/server.pem   (Backend combined PEM)"
+echo "  - frontend/certs/server.key  (Frontend private key)"
+echo "  - frontend/certs/server.crt  (Frontend certificate)"
+echo "  - frontend/certs/server.pem  (Frontend combined PEM)"
 echo "  - backend/.env               (Backend configuration)"
 echo "  - frontend/.env              (Frontend configuration)"
 echo ""
@@ -300,6 +307,16 @@ echo "🌐 Access URLs:"
 echo "  Frontend: https://localhost:5173"
 echo "  Backend:  https://localhost:3001"
 echo ""
-echo "⚠️  Note: If using self-signed certificates, your browser will show"
-echo "   a security warning. You can safely proceed for development."
+echo "🔒 Certificate Info:"
+if [ "$MKCERT_SUCCESS" = true ]; then
+  echo "  ✅ Using mkcert certificates (trusted, no browser warnings)"
+  echo "  📁 CA Root: $HOME/.mkcert-local"
+else
+  echo "  ⚠️  Using OpenSSL self-signed certificates"
+  echo "  📝 Your browser will show a security warning"
+  echo "  💡 You can safely proceed for development"
+  echo "  💡 Or install mkcert for trusted certificates:"
+  echo "     macOS:   brew install mkcert"
+  echo "     Linux:   apt install mkcert"
+fi
 echo ""

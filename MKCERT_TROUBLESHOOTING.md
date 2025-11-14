@@ -1,17 +1,36 @@
 # mkcert トラブルシューティングガイド
 
-## ❌ エラー: "permission denied"
+## 🎉 朗報: setup.shは自動的に解決します！
+
+**setup.shは自動的にカスタムCARootを使用するため、権限エラーは発生しません！**
+
+```bash
+./setup.sh
+
+# 自動的に以下を実行:
+# - カスタムCARootを $HOME/.mkcert-local に設定
+# - sudo不要で証明書を生成
+# - ブラウザで信頼される証明書を作成
+```
+
+**sudo不要、権限エラーなし、すぐに使えます！** ✅
+
+---
+
+## ❌ レガシー環境での "permission denied" エラー
 
 ```
 ERROR: failed to save CA key:
 open /home/sagemura/.local/share/mkcert/rootCA-key.pem: permission denied
 ```
 
-このエラーは、mkcertがCA証明書を保存するディレクトリに書き込み権限がない場合に発生します。
+このエラーは、古い環境やカスタム設定でmkcertを使用している場合に発生する可能性があります。
+
+**setup.shを実行すれば自動的に回避されます！**
 
 ---
 
-## 🔧 解決方法
+## 🔧 手動での解決方法（レガシー）
 
 ### 方法1: ディレクトリの権限を修正（推奨）
 
@@ -127,15 +146,34 @@ rm $(mkcert -CAROOT)/test.txt
 
 | 方法 | メリット | デメリット |
 |-----|---------|----------|
-| **方法1: 権限修正** | ✅ mkcertの完全な機能<br>✅ ブラウザで警告なし<br>✅ システム全体で信頼される | ⚠️ sudoが必要<br>⚠️ システム設定を変更 |
-| **方法2: カスタムCA** | ✅ sudoが不要<br>✅ ユーザーディレクトリのみ<br>✅ mkcertの完全な機能 | ⚠️ 環境変数の設定が必要<br>⚠️ 再インストールが必要 |
-| **方法3: OpenSSL** | ✅ 自動的に動作<br>✅ 追加設定不要<br>✅ Firefox互換性あり | ⚠️ ブラウザで手動承認が必要<br>⚠️ 開発体験が劣る |
+| **setup.sh（推奨）** | ✅ **完全自動**<br>✅ **sudo不要**<br>✅ ブラウザで警告なし<br>✅ カスタムCARootで安全 | なし！ |
+| 方法1: 権限修正 | ✅ システムデフォルトCARoot<br>✅ システム全体で信頼される | ⚠️ sudoが必要<br>⚠️ システム設定を変更 |
+| 方法2: カスタムCA | ✅ sudoが不要<br>✅ ユーザーディレクトリのみ | ⚠️ 手動設定が必要 |
+| 方法3: OpenSSL | ✅ mkcert不要<br>✅ 追加設定不要 | ⚠️ ブラウザで手動承認が必要 |
 
 ---
 
 ## 🚀 推奨フロー
 
-### 初めてのユーザー
+### 🎯 すべてのユーザー（最も簡単）
+
+```bash
+# これだけでOK！
+./setup.sh
+
+# 自動的に:
+# - mkcertがあれば、カスタムCARootで証明書生成（sudo不要）
+# - mkcertがなければ、OpenSSLで証明書生成
+# どちらの場合も、すぐに開発開始可能！
+```
+
+**これが最も簡単で推奨される方法です！** ✅
+
+---
+
+### レガシー: 手動でmkcertをセットアップしたい場合
+
+#### 権限を修正する方法
 
 ```bash
 # 1. 権限を確認
@@ -148,32 +186,24 @@ sudo chown -R $USER:$USER $(mkcert -CAROOT)
 ./setup.sh
 ```
 
-### sudoを使いたくない場合
+#### カスタムCARootを手動設定する方法
 
 ```bash
 # 1. カスタムCARootを設定
-export CAROOT=$HOME/.mkcert
+export CAROOT=$HOME/.mkcert-custom
 mkdir -p $CAROOT
 
 # 2. mkcertを再インストール
 mkcert -install
 
 # 3. .bashrc/.zshrcに追加（永続化）
-echo 'export CAROOT=$HOME/.mkcert' >> ~/.bashrc
+echo 'export CAROOT=$HOME/.mkcert-custom' >> ~/.bashrc
 
 # 4. setup.shを実行
 ./setup.sh
 ```
 
-### すぐに動かしたい場合
-
-```bash
-# setup.shが自動的にOpenSSLにフォールバック
-./setup.sh
-
-# 証明書は生成される
-# ブラウザで手動承認が必要だが、すぐに開発開始可能
-```
+**注意**: setup.shは自動的に`$HOME/.mkcert-local`を使用するため、通常は手動設定は不要です。
 
 ---
 

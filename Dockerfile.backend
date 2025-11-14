@@ -1,18 +1,24 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
-RUN apk add --no-cache sqlite sqlite-dev
+# Install build dependencies for better-sqlite3
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
 
-COPY backend/package*.json ./
+COPY backend/package.json ./
+
+# Install dependencies (will build better-sqlite3 for Linux)
 RUN npm install
 
-COPY backend/src/database/init.sql /init/init.sql
-COPY backend/src/database/init_db.sh /usr/local/bin/init_db.sh
-RUN chmod +x /usr/local/bin/init_db.sh
-COPY backend/ ./
+# Copy source files (excluding node_modules which is already built)
+COPY backend/src ./src
+COPY backend/tsconfig.json ./
+
 RUN npm run build
 
+# Create uploads directory for avatars
+RUN mkdir -p /app/uploads/avatars
 
-EXPOSE 3001
+ENV NODE_ENV=production
 
-CMD ["npm", "start"]
+CMD ["node", "dist/index.js"]

@@ -5,10 +5,12 @@ import { PongGame } from '../game/PongGame';
 import { TankGame } from '../game/TankGame';
 import { WebSocketService } from '../services/WebSocketService';
 import { User } from '../types/User';
+import { Router, Route } from '../router/Router';
 
 export class App {
   private container: HTMLElement;
   private wsService: WebSocketService;
+  private router: Router;
   private currentUser: User | null = null;
   private currentGame: PongGame | null = null;
   private currentTankGame: TankGame | null = null;
@@ -19,74 +21,67 @@ export class App {
   constructor() {
     this.container = document.getElementById('app')!;
     this.wsService = new WebSocketService();
+    this.router = new Router();
 
-    window.onpopstate = () => {
-      this.handleRoute(location.pathname);
-    }
-  }
-  private navigateTo(path: string): void {
-  history.pushState(null, '', path);
-  this.handleRoute(path);
+    // Set up router handler
+    this.router.onRouteChange((route: Route) => {
+      this.handleRouteChange(route);
+    });
   }
 
-  public logout(): void {
-    localStorage.clear();
-    this.currentUser = null;
-    this.navigateTo('/login');
-  }
-
-  private handleRoute(path: string): void {
-
-    const staticRoutes: Record<string, () => void> = {
-      '/login': () => this.showLogin(),
-      '/tournament': () => this.showTournament(),
-      '/users': () => this.showUserList(),
-      '/friends': () => this.showUserList(),
-      '/profile': () => this.showUserList(),
-      '/stats': () => this.showUserList(),
-      '/': () => {
-        this.currentUser ? this.showUserList() : this.showLogin();
-      }
-    };
-
-    if (path in staticRoutes) {
-      staticRoutes[path]();
-      return;
-    }
-
-    const dynamicRoutes: Array<[string, (id: string) => void]> = [
-      ['/game/', (id) => this.startGame(id)],
-      ['/tankgame/', (id) => this.startTankGame(id)],
-      ['/tournamentgame/', (id) => this.startGame(id)],
-    ];
-
-    for (const [prefix, handler] of dynamicRoutes) {
-      if (path.startsWith(prefix)) {
-        const id = path.slice(prefix.length);
-        handler(id);
-        return;
-      }
-    }
-
-    // fallback
-    this.showUserList();
-  }
   async init(): Promise<void> {
     const savedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
 
     if (savedUser && token) {
       this.currentUser = JSON.parse(savedUser);
-      await this.showUserList();
-    } else {
-      this.showLogin();
+    }
+
+    // Initialize router with current URL
+    this.router.init();
+  }
+
+  private async handleRouteChange(route: Route): Promise<void> {
+    // Check authentication for protected routes
+    const isAuthenticated = !!localStorage.getItem('token') && !!this.currentUser;
+
+    if (!isAuthenticated && route.name !== 'login') {
+      // Redirect to login if not authenticated
+      this.router.replace({ name: 'login' });
+      return;
+    }
+
+    // Handle route
+    switch (route.name) {
+      case 'login':
+        this.showLogin();
+        break;
+      case 'userlist':
+        await this.showUserList();
+        break;
+      case 'pong-game':
+        await this.startGame(route.gameId);
+        break;
+      case 'tank-game':
+        await this.startTankGame(route.gameId);
+        break;
+      case 'tournament':
+        this.showTournament();
+        break;
+      default:
+        // Unknown route, redirect to appropriate page
+        if (isAuthenticated) {
+          this.router.replace({ name: 'userlist' });
+        } else {
+          this.router.replace({ name: 'login' });
+        }
     }
   }
 
   private showLogin(): void {
     const loginForm = new LoginForm(this.container, async (user: User) => {
       this.currentUser = user;
-      this.navigateTo('/users');
+      this.router.navigate({ name: 'userlist' });
     });
     loginForm.render();
   }
@@ -94,11 +89,7 @@ export class App {
   private async showUserList(): Promise<void> {
     try {
       console.log('Attempting to connect to WebSocket...');
-
-        if(!this.wsService.isConnected()){
-            await this.wsService.connect();
-        }
-
+      await this.wsService.connect();
       console.log('WebSocket connected successfully');
       
       console.log('Sending authentication token...');
@@ -113,8 +104,7 @@ export class App {
         this.wsService,
         (gameId: string) => this.startGame(gameId),
         (gameId: string) => this.startTankGame(gameId),
-        () => this.showTournament(),
-        () => this.logout()
+        () => this.showTournament()
       );
       
       await userList.init();
@@ -122,12 +112,11 @@ export class App {
     } catch (error) {
       console.error('Failed to connect to server:', error);
       console.log('Falling back to login screen');
-      this.navigateTo('/login');
+      this.showLogin();
     }
   }
 
   private async startGame(gameId: string): Promise<void> {
-    
     this.container.innerHTML = `
       <div class="fixed inset-0 bg-gray-900 flex flex-col">
         <div class="bg-gray-800 p-4 shadow-lg">
@@ -224,10 +213,10 @@ export class App {
         this.tournament.returnFromGame();
       } else {
         // トーナメントコンポーネントが存在しない場合は新規作成
-        this.showTournament();
+        this.router.navigate({ name: 'tournament' });
       }
     } else {
-      this.showUserList();
+      this.router.navigate({ name: 'userlist' });
     }
   }
 
@@ -316,19 +305,10 @@ export class App {
       this.resizeHandler = null;
     }
 
-    this.showUserList();
+    this.router.navigate({ name: 'userlist' });
   }
 
-  private async showTournament(): Promise<void> {
-    
-    if(!this.wsService.isConnected()){
-        await this.wsService.connect();
-        this.wsService.send('authenticate', {
-            token: localStorage.getItem('token') 
-        });
-    }
-
-
+  private showTournament(): void {
     this.inTournament = true;
     this.tournament = new Tournament(
       this.container,
@@ -344,6 +324,6 @@ export class App {
   private endTournament(): void {
     this.inTournament = false;
     this.tournament = null;
-    this.showUserList();
+    this.router.navigate({ name: 'userlist' });
   }
 }

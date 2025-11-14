@@ -1,0 +1,21 @@
+{
+  "name": "transcendence-evaluation-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive evaluation tests for the Transcendence project",
+  "scripts": {
+    "test": "npm run test:security && npm run test:api && npm run test:game",
+    "test:security": "node security/test-security.js",
+    "test:api": "node api/test-api.js",
+    "test:game": "node game/test-game.js",
+    "test:integration": "node integration/test-integration.js",
+    "test:all": "node run-all-tests.js",
+    "report": "node utils/generate-report.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "ws": "^8.14.0",
+    "chalk": "^4.1.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {}
+}

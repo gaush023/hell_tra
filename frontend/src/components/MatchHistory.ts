@@ -1,5 +1,6 @@
 import { User, MatchHistory as MatchHistoryItem } from '../types/User';
 import { ApiService } from '../services/ApiService';
+import { sanitize } from '../utils/sanitize';
 
 export class MatchHistory {
   private container: HTMLElement;
@@ -172,16 +173,16 @@ export class MatchHistory {
             <div class="text-2xl">${gameIcon}</div>
             <div>
               <div class="flex items-center space-x-2">
-                <span class="text-white font-medium">${match.gameType.toUpperCase()}</span>
+                <span class="text-white font-medium">${sanitize(match.gameType.toUpperCase())}</span>
                 <span class="text-gray-300">•</span>
-                <span class="text-gray-300">${this.formatGameMode(match.gameMode)}</span>
+                <span class="text-gray-300">${sanitize(this.formatGameMode(match.gameMode))}</span>
                 ${match.tournamentId ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded">Tournament</span>' : ''}
               </div>
               <div class="text-sm text-gray-400">
-                vs ${match.opponentNames.join(', ')}
+                vs ${match.opponentNames.map(name => sanitize(name)).join(', ')}
               </div>
               <div class="text-xs text-gray-500">
-                ${this.formatDate(match.datePlayed)} • ${this.formatDuration(match.duration)}
+                ${sanitize(this.formatDate(match.datePlayed))} • ${sanitize(this.formatDuration(match.duration))}
               </div>
             </div>
           </div>
@@ -210,18 +211,18 @@ export class MatchHistory {
       <div class="space-y-4">
         <div class="text-center">
           <div class="text-4xl mb-2">${gameIcon}</div>
-          <div class="text-xl font-bold text-white">${match.gameType.toUpperCase()} ${this.formatGameMode(match.gameMode)}</div>
+          <div class="text-xl font-bold text-white">${sanitize(match.gameType.toUpperCase())} ${sanitize(this.formatGameMode(match.gameMode))}</div>
           ${match.tournamentId ? '<div class="bg-purple-600 text-white text-sm px-3 py-1 rounded inline-block mt-2">Tournament Match</div>' : ''}
         </div>
 
         <div class="bg-gray-700 p-4 rounded">
           <h4 class="text-lg font-semibold text-white mb-3">Match Result</h4>
           <div class="text-center">
-            <div class="text-3xl font-bold ${resultColor} mb-2">${match.result.toUpperCase()}</div>
+            <div class="text-3xl font-bold ${resultColor} mb-2">${sanitize(match.result.toUpperCase())}</div>
             <div class="text-xl text-white">
-              <span class="font-bold">${match.score}</span>
+              <span class="font-bold">${sanitize(String(match.score))}</span>
               <span class="text-gray-400 mx-2">-</span>
-              <span>${match.opponentScores.join(' - ')}</span>
+              <span>${match.opponentScores.map(score => sanitize(String(score))).join(' - ')}</span>
             </div>
           </div>
         </div>
@@ -231,8 +232,8 @@ export class MatchHistory {
           <div class="space-y-2">
             ${match.opponentNames.map((name, index) => `
               <div class="flex justify-between items-center">
-                <span class="text-white">${name}</span>
-                <span class="text-gray-300">${match.opponentScores[index]} points</span>
+                <span class="text-white">${sanitize(name)}</span>
+                <span class="text-gray-300">${sanitize(String(match.opponentScores[index]))} points</span>
               </div>
             `).join('')}
           </div>
@@ -243,15 +244,15 @@ export class MatchHistory {
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span class="text-gray-400">Date:</span>
-              <span class="text-white ml-2">${this.formatDate(match.datePlayed)}</span>
+              <span class="text-white ml-2">${sanitize(this.formatDate(match.datePlayed))}</span>
             </div>
             <div>
               <span class="text-gray-400">Duration:</span>
-              <span class="text-white ml-2">${this.formatDuration(match.duration)}</span>
+              <span class="text-white ml-2">${sanitize(this.formatDuration(match.duration))}</span>
             </div>
             <div>
               <span class="text-gray-400">Game Mode:</span>
-              <span class="text-white ml-2">${this.formatGameMode(match.gameMode)}</span>
+              <span class="text-white ml-2">${sanitize(this.formatGameMode(match.gameMode))}</span>
             </div>
             <div>
               <span class="text-gray-400">Ranked:</span>
@@ -266,8 +267,7 @@ export class MatchHistory {
   private attachEventListeners(): void {
     const backBtn = document.getElementById('back-btn')!;
     backBtn.addEventListener('click', () => {
-        history.pushState({}, '', '/users');
-        this.onBack();
+      this.onBack();
     });
 
     // Filter event listeners

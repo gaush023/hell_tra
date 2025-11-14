@@ -125,7 +125,7 @@ export async function userRoutes(fastify: FastifyInstance) {
       }
 
       // Update user avatar in database
-      const avatarUrl = `/api/avatars/avatars/${filename}`;
+      const avatarUrl = `/api/avatars/${filename}`;
       console.log('Attempting to update avatar URL:', avatarUrl, 'for user:', userId);
       const updateResult = userService.updateUserAvatar(userId, avatarUrl);
       console.log('Update result:', updateResult);
@@ -305,6 +305,24 @@ export async function userRoutes(fastify: FastifyInstance) {
   });
 
   fastify.get('/leaderboard', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
-    reply.send([]);
+    try {
+      const { gameType, limit = 10 } = request.query as { gameType?: 'pong' | 'tank'; limit?: number };
+
+      const leaderboard = userService.getLeaderboard(gameType, Number(limit));
+
+      // Remove password from user objects
+      const sanitizedLeaderboard = leaderboard.map(entry => {
+        const { password, ...userWithoutPassword } = entry.user;
+        return {
+          ...entry,
+          user: userWithoutPassword
+        };
+      });
+
+      reply.send(sanitizedLeaderboard);
+    } catch (error) {
+      console.error('Get leaderboard error:', error);
+      reply.code(500).send({ error: 'Internal server error' });
+    }
   });
 }

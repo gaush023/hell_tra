@@ -1,5 +1,6 @@
 import { User } from '../types/User';
 import { ApiService } from '../services/ApiService';
+import { sanitize } from '../utils/sanitize';
 
 export class Profile {
   private container: HTMLElement;
@@ -12,6 +13,30 @@ export class Profile {
     this.apiService = new ApiService();
     this.currentUser = currentUser;
     this.onBack = onBack;
+  }
+
+  private getAvatarUrl(avatar: string | null | undefined): string {
+    if (!avatar) {
+      // Use protocol-aware default avatar URL
+      const protocol = window.location.protocol;
+      const host = 'localhost:3001';
+      return `${protocol}//${host}/api/avatars/default.svg`;
+    }
+
+    // If avatar already has full URL, return as is
+    if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+      return avatar;
+    }
+
+    // If avatar starts with /api/avatars/, construct full URL
+    if (avatar.startsWith('/api/avatars/')) {
+      const protocol = window.location.protocol;
+      const host = 'localhost:3001';
+      return `${protocol}//${host}${avatar}`;
+    }
+
+    // Otherwise, return as is
+    return avatar;
   }
 
   async render(): Promise<void> {
@@ -34,7 +59,7 @@ export class Profile {
                   <!-- Avatar Upload Section -->
                   <div class="flex flex-col items-center mb-6">
                     <div class="relative mb-4">
-                      <img id="avatar-preview" src="${this.currentUser.avatar || '/api/avatars/avatars/default.svg'}"
+                      <img id="avatar-preview" src="${this.getAvatarUrl(this.currentUser.avatar)}"
                            alt="Avatar" class="w-24 h-24 rounded-full object-cover border-4 border-gray-500">
                       <button id="avatar-change-btn" class="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -48,20 +73,20 @@ export class Profile {
 
                   <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                    <input type="text" id="username" value="${this.currentUser.username}"
+                    <input type="text" id="username" value="${sanitize(this.currentUser.username)}"
                            class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500" readonly>
                   </div>
 
                   <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Display Name</label>
-                    <input type="text" id="displayName" value="${this.currentUser.displayName || ''}"
+                    <input type="text" id="displayName" value="${sanitize(this.currentUser.displayName || '')}"
                            placeholder="Enter display name"
                            class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500">
                   </div>
 
                   <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                    <input type="email" id="email" value="${this.currentUser.email || ''}"
+                    <input type="email" id="email" value="${sanitize(this.currentUser.email || '')}"
                            placeholder="Enter email address"
                            class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500">
                   </div>
@@ -69,7 +94,7 @@ export class Profile {
                   <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Bio</label>
                     <textarea id="bio" rows="4" placeholder="Tell us about yourself..."
-                              class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500">${this.currentUser.bio || ''}</textarea>
+                              class="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:border-blue-500">${sanitize(this.currentUser.bio || '')}</textarea>
                   </div>
 
                   <div class="flex space-x-3">
@@ -89,11 +114,11 @@ export class Profile {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span class="text-gray-300">Member since:</span>
-                  <span class="text-white ml-2">${new Date(this.currentUser.createdAt).toLocaleDateString()}</span>
+                  <span class="text-white ml-2">${sanitize(new Date(this.currentUser.createdAt).toLocaleDateString())}</span>
                 </div>
                 <div>
                   <span class="text-gray-300">Last login:</span>
-                  <span class="text-white ml-2">${this.currentUser.lastLoginAt ? new Date(this.currentUser.lastLoginAt).toLocaleDateString() : 'N/A'}</span>
+                  <span class="text-white ml-2">${this.currentUser.lastLoginAt ? sanitize(new Date(this.currentUser.lastLoginAt).toLocaleDateString()) : 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -111,7 +136,6 @@ export class Profile {
   private attachEventListeners(): void {
     const backBtn = document.getElementById('back-btn')!;
     backBtn.addEventListener('click', () => {
-        history.pushState({}, '', '/users');
       this.onBack();
     });
 
@@ -149,36 +173,35 @@ export class Profile {
 
   private async saveProfile(): Promise<void> {
     try {
-        const displayName = (document.getElementById('displayName') as HTMLInputElement).value.trim();
-        const email = (document.getElementById('email') as HTMLInputElement).value.trim();
-        const bio = (document.getElementById('bio') as HTMLTextAreaElement).value.trim();
+      const displayName = (document.getElementById('displayName') as HTMLInputElement).value.trim();
+      const email = (document.getElementById('email') as HTMLInputElement).value.trim();
+      const bio = (document.getElementById('bio') as HTMLTextAreaElement).value.trim();
 
-        const updates: any = {};
-        if (displayName !== (this.currentUser.displayName || '')) {
+      const updates: any = {};
+      if (displayName !== (this.currentUser.displayName || '')) {
         updates.displayName = displayName || undefined;
-        }
-        if (email !== (this.currentUser.email || '')) {
+      }
+      if (email !== (this.currentUser.email || '')) {
         updates.email = email || undefined;
-        }
-        if (bio !== (this.currentUser.bio || '')) {
+      }
+      if (bio !== (this.currentUser.bio || '')) {
         updates.bio = bio || undefined;
-        }
+      }
 
-        if (Object.keys(updates).length === 0) {
+      if (Object.keys(updates).length === 0) {
         this.showMessage('No changes to save', 'info');
         return;
-        }
+      }
 
-        const updatedUser = await this.apiService.updateProfile(updates);
+      const updatedUser = await this.apiService.updateProfile(updates);
 
-        // Update current user object
-        Object.assign(this.currentUser, updatedUser);
+      // Update current user object
+      Object.assign(this.currentUser, updatedUser);
 
-        // Update localStorage
-        localStorage.setItem('user', JSON.stringify(this.currentUser));
+      // Update localStorage
+      localStorage.setItem('user', JSON.stringify(this.currentUser));
 
-        this.showMessage('Profile updated successfully!', 'success');
-
+      this.showMessage('Profile updated successfully!', 'success');
     } catch (error) {
       console.error('Failed to update profile:', error);
       this.showMessage('Failed to update profile. Please try again.', 'error');
@@ -228,8 +251,8 @@ export class Profile {
       const response = await this.apiService.uploadAvatar(file);
       console.log('Upload response:', response);
 
-      // Update current user
-      this.currentUser.avatar = `http://localhost:3001${response.avatarUrl}`;
+      // Update current user - store relative path, not full URL
+      this.currentUser.avatar = response.avatarUrl;
 
       // Update localStorage
       localStorage.setItem('user', JSON.stringify(this.currentUser));
@@ -241,27 +264,24 @@ export class Profile {
 
       // Revert preview on error
       const avatarPreview = document.getElementById('avatar-preview') as HTMLImageElement;
-      avatarPreview.src = this.currentUser.avatar || '/api/avatars/avatars/default.svg';
+      avatarPreview.src = this.getAvatarUrl(this.currentUser.avatar);
     }
   }
 
   private async removeAvatar(): Promise<void> {
     try {
-      // Set to default avatar
-      const defaultAvatarUrl = 'api/avatars/avatars/default.svg';
-
-      // Update avatar on server
+      // Update avatar on server to null
       await this.apiService.updateProfile({ avatar: null });
 
-      // Update UI
-      const avatarPreview = document.getElementById('avatar-preview') as HTMLImageElement;
-      avatarPreview.src = defaultAvatarUrl;
-
-      // Update current user
-      this.currentUser.avatar = defaultAvatarUrl;
+      // Update current user to undefined (will show default)
+      this.currentUser.avatar = undefined;
 
       // Update localStorage
       localStorage.setItem('user', JSON.stringify(this.currentUser));
+
+      // Update UI
+      const avatarPreview = document.getElementById('avatar-preview') as HTMLImageElement;
+      avatarPreview.src = this.getAvatarUrl(undefined);
 
       this.showMessage('Avatar removed successfully!', 'success');
     } catch (error) {

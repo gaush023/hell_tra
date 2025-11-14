@@ -2,8 +2,12 @@ import { User, GameInvitation, FriendRequest, UserStats, MatchHistory, Leaderboa
 
 export class ApiService {
   private baseUrl: string;
-  constructor(baseUrl: string = '/api') {
-    this.baseUrl = baseUrl;
+
+  constructor(baseUrl?: string) {
+    // Use provided URL, or environment variable, or auto-detect protocol
+    this.baseUrl = baseUrl ||
+                   import.meta.env.VITE_API_BASE_URL ||
+                   `${window.location.protocol}//localhost:3001/api`;
   }
 
   async register(username: string, password: string): Promise<User> {

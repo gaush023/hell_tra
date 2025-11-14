@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { MultipartFile } from '@fastify/multipart';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-CHANGE-THIS-IN-PRODUCTION';
 
 export interface AuthenticatedRequest extends FastifyRequest {
   user?: {

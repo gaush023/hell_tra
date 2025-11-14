@@ -3,14 +3,14 @@ export class WebSocketService {
   private url: string;
   private messageHandlers: Map<string, Function[]> = new Map();
 
-  constructor(url: string = 'wss://localhost/ws') {
-    this.url = url;
+  constructor(url?: string) {
+    // Use provided URL, or environment variable, or auto-detect protocol
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    this.url = url ||
+               import.meta.env.VITE_WS_URL ||
+               `${wsProtocol}//localhost:3001/ws`;
   }
 
-  public isConnected(): boolean {
-    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
-  }
-  
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(this.url);

@@ -38,88 +38,18 @@ fi
 echo ""
 
 # ====================================
-# Step 2: HTTPS Certificate Setup
+# Step 2: HTTPS Certificate Setup (No sudo, no mkcert)
 # ====================================
-echo "🔒 Step 2: Setting up HTTPS certificates..."
+echo "🔒 Step 2: Generating HTTPS certificates (sudo-free)..."
 
-# Create certs directories for backend and frontend
+# Create cert directories
 mkdir -p ./backend/certs
 mkdir -p ./frontend/certs
 
-# Check if certificates already exist (check backend location)
-if [ -f ./backend/certs/server.key ] && [ -f ./backend/certs/server.crt ]; then
-  echo "  ℹ️  Certificates already exist in ./backend/certs/ and ./frontend/certs/"
+echo "  📜 Generating self-signed certificate with OpenSSL..."
 
-  # Ask if user wants to regenerate
-  read -p "  Do you want to regenerate certificates? (y/N): " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "  ⏭️  Skipping certificate generation"
-    SKIP_CERT=true
-  fi
-fi
-
-if [ -z "$SKIP_CERT" ]; then
-  # Try mkcert first (recommended for development)
-  MKCERT_SUCCESS=false
-  if command -v mkcert &> /dev/null; then
-    echo "  📜 Using mkcert to generate certificates..."
-
-    # Use custom CAROOT to avoid permission issues (no sudo required)
-    export CAROOT="$HOME/.mkcert-local"
-    mkdir -p "$CAROOT"
-
-    echo "  ℹ️  Using custom CAROOT: $CAROOT (no sudo required)"
-
-    # Install local CA (no sudo required)
-    if mkcert -install 2>/dev/null; then
-      echo "  ✅ mkcert CA installed successfully"
-
-      # Generate certificates directly into backend/certs
-      cd ./backend/certs
-      if mkcert localhost 127.0.0.1 ::1 2>/dev/null; then
-        # Find generated certificate files (filenames vary)
-        CERT_NAME=$(ls localhost*.pem 2>/dev/null | grep -v 'key' | head -n 1)
-        KEY_NAME=$(ls localhost*-key.pem 2>/dev/null | head -n 1)
-
-        if [ -n "$CERT_NAME" ] && [ -n "$KEY_NAME" ]; then
-          mv "$CERT_NAME" server.crt
-          mv "$KEY_NAME" server.key
-          cd ../..
-
-          # Create PEM format for backend
-          cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
-
-          # Copy certificates to frontend
-          cp ./backend/certs/server.crt ./frontend/certs/server.crt
-          cp ./backend/certs/server.key ./frontend/certs/server.key
-          cp ./backend/certs/server.pem ./frontend/certs/server.pem
-
-          echo "  ✅ Certificates generated with mkcert (no sudo required)"
-          MKCERT_SUCCESS=true
-        else
-          cd ../.. 2>/dev/null || true
-          echo "  ⚠️  Could not find generated certificate files"
-          echo "  ℹ️  Falling back to OpenSSL..."
-        fi
-      else
-        cd ../.. 2>/dev/null || true
-        echo "  ⚠️  mkcert certificate generation failed"
-        echo "  ℹ️  Falling back to OpenSSL..."
-      fi
-    else
-      echo "  ⚠️  Failed to install mkcert CA"
-      echo "  💡 Tip: mkcert is using CAROOT=$CAROOT"
-      echo "  ℹ️  Falling back to OpenSSL..."
-    fi
-  fi
-
-  # Fallback to OpenSSL if mkcert failed or is not available
-  if [ "$MKCERT_SUCCESS" = false ]; then
-    echo "  ℹ️  Using openssl to generate self-signed certificates..."
-
-    # Create OpenSSL config for Firefox compatibility
-    cat > ./backend/certs/openssl.cnf << 'EOF'
+# Create OpenSSL config
+cat > ./backend/certs/openssl.cnf << 'EOF'
 [req]
 default_bits = 2048
 prompt = no
@@ -147,73 +77,29 @@ IP.1 = 127.0.0.1
 IP.2 = ::1
 EOF
 
-    # Generate private key for backend
-    openssl genrsa -out ./backend/certs/server.key 2048
+# Generate private key
+openssl genrsa -out ./backend/certs/server.key 2048
 
-    # Generate self-signed certificate with proper extensions for Firefox
-    openssl req -new -x509 -sha256 -days 365 \
-      -key ./backend/certs/server.key \
-      -out ./backend/certs/server.crt \
-      -config ./backend/certs/openssl.cnf \
-      -extensions v3_req
+# Generate certificate
+openssl req -new -x509 -sha256 -days 365 \
+  -key ./backend/certs/server.key \
+  -out ./backend/certs/server.crt \
+  -config ./backend/certs/openssl.cnf \
+  -extensions v3_req
 
-    # Create PEM format for backend
-    cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
+# Combine PEM
+cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
 
-    # Copy certificates to frontend
-    cp ./backend/certs/server.crt ./frontend/certs/server.crt
-    cp ./backend/certs/server.key ./frontend/certs/server.key
-    cp ./backend/certs/server.pem ./frontend/certs/server.pem
+# Copy to frontend
+cp ./backend/certs/server.crt ./frontend/certs/server.crt
+cp ./backend/certs/server.key ./frontend/certs/server.key
+cp ./backend/certs/server.pem ./frontend/certs/server.pem
 
-    # Clean up config file
-    rm ./backend/certs/openssl.cnf
+# Cleanup
+rm ./backend/certs/openssl.cnf
 
-    echo "  ✅ Self-signed certificates generated with openssl"
-    echo ""
-    echo "  ⚠️  Firefox Security Warning:"
-    echo "  Browsers will show security warnings for self-signed certificates."
-    echo ""
-    echo "  🦊 For Firefox, you need to manually accept the certificate:"
-    echo "    1. Visit https://localhost:3001 in Firefox"
-    echo "    2. Click 'Advanced' → 'Accept the Risk and Continue'"
-    echo "    3. Visit https://localhost:5173 and repeat"
-    echo ""
-    echo "  💡 Recommended: Install mkcert for trusted local certificates"
-    echo "    macOS:   brew install mkcert"
-    echo "    Linux:   apt install mkcert / yum install mkcert"
-    echo "    Windows: choco install mkcert"
-  fi  # End of MKCERT_SUCCESS check
-
-  # Set proper permissions for backend certificates
-  chmod 600 ./backend/certs/server.key 2>/dev/null || true
-  chmod 644 ./backend/certs/server.crt 2>/dev/null || true
-  chmod 600 ./backend/certs/server.pem 2>/dev/null || true
-
-  # Set proper permissions for frontend certificates
-  chmod 600 ./frontend/certs/server.key 2>/dev/null || true
-  chmod 644 ./frontend/certs/server.crt 2>/dev/null || true
-  chmod 600 ./frontend/certs/server.pem 2>/dev/null || true
-
-  echo "  ✅ Certificate permissions set"
-fi  # End of SKIP_CERT check
-
-# Update backend/.env to enable HTTPS and set certificate paths
-# Note: Paths are relative to backend directory, so we use certs/ (in the same directory)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  sed -i '' 's|^HTTPS_ENABLED=.*|HTTPS_ENABLED=true|' backend/.env
-  sed -i '' 's|^SSL_KEY_PATH=.*|SSL_KEY_PATH=certs/server.key|' backend/.env
-  sed -i '' 's|^SSL_CERT_PATH=.*|SSL_CERT_PATH=certs/server.crt|' backend/.env
-  sed -i '' 's|^FRONTEND_URL=.*|FRONTEND_URL=https://localhost:5173|' backend/.env
-else
-  sed -i 's|^HTTPS_ENABLED=.*|HTTPS_ENABLED=true|' backend/.env
-  sed -i 's|^SSL_KEY_PATH=.*|SSL_KEY_PATH=certs/server.key|' backend/.env
-  sed -i 's|^SSL_CERT_PATH=.*|SSL_CERT_PATH=certs/server.crt|' backend/.env
-  sed -i 's|^FRONTEND_URL=.*|FRONTEND_URL=https://localhost:5173|' backend/.env
-fi
-
-echo "  ✅ Updated backend/.env with HTTPS configuration"
-
-echo ""
+echo "  ✅ Self-signed certificates generated (no sudo required)"
+echo "  ⚠️ Browsers will warn about security — this is normal for self-signed certificates."
 
 # ====================================
 # Step 3: Frontend .env Setup

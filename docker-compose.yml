@@ -1,10 +1,11 @@
-version: '3.8'
-
 services:
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_BASE_URL: https://localhost:8443/api
+        VITE_WS_URL: wss://localhost:8443/ws
     ports:
       - "8080:80"      # HTTP (redirects to HTTPS)
       - "8443:443"    # HTTPS
@@ -13,8 +14,8 @@ services:
     depends_on:
       - backend
     environment:
-      - VITE_API_BASE_URL=https://backend:3001
-      - VITE_WS_URL=wss://backend:3001/ws
+      - VITE_API_BASE_URL=https://localhost:8443/api
+      - VITE_WS_URL=wss://localhost:8443/ws
 
   backend:
     build:
@@ -24,11 +25,12 @@ services:
       - "3001:3001"
     volumes:
       - ./certs:/app/certs:ro
+    env_file:
+      - .env.docker
     environment:
       - NODE_ENV=production
       - HTTPS_ENABLED=true
       - SSL_KEY_PATH=/app/certs/server.key
       - SSL_CERT_PATH=/app/certs/server.crt
-      - FRONTEND_URL=https://localhost
+      - FRONTEND_URL=https://localhost:8443
       - PORT=3001
-      - JWT_SECRET=00C5rO46dA7v87JpjWKBtDFpy3+D0Cz+lpqKUTqWIPg=

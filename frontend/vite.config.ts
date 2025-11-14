@@ -16,7 +16,7 @@ const httpsConfig = certsExist ? {
 export default defineConfig({
   server: {
     host: true,
-    port: 3000,
+    port: 5173,
     https: httpsConfig,
   },
   build: {

@@ -4,11 +4,12 @@ export class WebSocketService {
   private messageHandlers: Map<string, Function[]> = new Map();
 
   constructor(url?: string) {
-    // Use provided URL, or environment variable, or auto-detect protocol
+    // Use provided URL, or environment variable, or derive from current location
+    // Since nginx proxies /ws to backend, we should use the same origin
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     this.url = url ||
                import.meta.env.VITE_WS_URL ||
-               `${wsProtocol}//localhost:3001/ws`;
+               `${wsProtocol}//${window.location.host}/ws`;
   }
 
   connect(): Promise<void> {

@@ -22,9 +22,8 @@ try {
 }
 
 // HTTPS Configuration with defaults
-// Paths are relative to backend directory
-const sslKeyPath = path.join(__dirname, '../..', process.env.SSL_KEY_PATH || 'certs/server.key');
-const sslCertPath = path.join(__dirname, '../..', process.env.SSL_CERT_PATH || 'certs/server.crt');
+const sslKeyPath = path.join(__dirname, '../../', process.env.SSL_KEY_PATH || 'certs/server.key');
+const sslCertPath = path.join(__dirname, '../../', process.env.SSL_CERT_PATH || 'certs/server.crt');
 
 // Check if SSL certificates exist
 const certsExist = fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath);

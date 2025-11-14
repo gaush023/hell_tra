@@ -6,8 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "80:80"      # HTTP (redirects to HTTPS)
-      - "443:443"    # HTTPS
+      - "8080:80"      # HTTP (redirects to HTTPS)
+      - "8443:443"    # HTTPS
     volumes:
       - ./certs:/etc/nginx/ssl:ro
     depends_on:

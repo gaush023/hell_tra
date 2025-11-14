@@ -175,17 +175,73 @@ docker-compose down
 
 開発環境で生成した証明書は**自己署名証明書**です。ブラウザで初回アクセス時に警告が表示されます。
 
+### 🦊 Firefox での注意事項（重要）
+
+**Firefoxは自己署名証明書に対して特に厳格です。**
+
+#### Firefox で正しく動作させるために必要な証明書要件:
+1. ✅ **SubjectAltName (SAN) の設定** - CN だけでは不十分
+2. ✅ **適切な keyUsage 拡張** - `digitalSignature`, `keyEncipherment`
+3. ✅ **extendedKeyUsage** - `serverAuth` の指定
+4. ✅ **SHA-256 ハッシュアルゴリズム** - SHA-1 は非推奨
+5. ✅ **2048ビット以上のRSA鍵**
+
+#### setup.sh で生成される証明書の特徴:
+
+**mkcert使用時（推奨）**:
+- ✅ システムの信頼ストアに自動追加
+- ✅ Firefoxでも警告なしで動作
+- ✅ インストール: `brew install mkcert` (macOS) / `apt install mkcert` (Linux)
+
+**OpenSSL使用時**:
+- ✅ Firefox要件を満たす適切な拡張が設定済み
+- ⚠️ 手動での証明書承認が必要
+
+#### Firefoxで証明書を承認する手順:
+1. `https://localhost:3001` にアクセス
+2. 「警告: 潜在的なセキュリティリスクあり」と表示される
+3. 「詳細情報」→「例外を追加」をクリック
+4. 「セキュリティ例外を承認」をクリック
+5. フロントエンド (`https://localhost:5173`) でも同じ手順を繰り返す
+
+**注意**: 両方のポート (3001と5173) で個別に承認が必要です。
+
 ### Chrome/Edgeの場合
 1. 警告画面で「詳細設定」をクリック
 2. 「localhost にアクセスする（安全ではありません）」をクリック
 
-### Firefoxの場合
-1. 「詳細情報」をクリック
-2. 「危険を承知で続行」をクリック
-
 ### Safariの場合
 1. 「詳細を表示」をクリック
 2. 「このWebサイトを表示」をクリック
+
+### 💡 開発体験を改善するには
+
+**mkcert の使用を強く推奨します:**
+
+```bash
+# macOS
+brew install mkcert
+mkcert -install
+
+# Linux (Debian/Ubuntu)
+sudo apt install libnss3-tools
+sudo apt install mkcert
+mkcert -install
+
+# Linux (Fedora/CentOS)
+sudo yum install nss-tools
+sudo yum install mkcert
+mkcert -install
+
+# その後、setup.shを再実行
+./setup.sh
+```
+
+mkcertを使用すると:
+- ✅ すべてのブラウザで警告が出ない
+- ✅ Firefox での手動承認が不要
+- ✅ システム全体で信頼される証明書
+- ✅ 開発者体験が大幅に向上
 
 ## 🌐 本番環境での証明書
 

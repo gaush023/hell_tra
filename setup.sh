@@ -83,25 +83,65 @@ if [ -z "$SKIP_CERT" ]; then
   else
     echo "  ℹ️  mkcert not found, using openssl (self-signed certificates)..."
 
-    # Generate with openssl
+    # Create OpenSSL config for Firefox compatibility
+    cat > ./certs/openssl.cnf << 'EOF'
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+x509_extensions = v3_req
+distinguished_name = dn
+
+[dn]
+C = JP
+ST = Tokyo
+L = Tokyo
+O = Development
+CN = localhost
+
+[v3_req]
+subjectAltName = @alt_names
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[alt_names]
+DNS.1 = localhost
+DNS.2 = *.localhost
+IP.1 = 127.0.0.1
+IP.2 = ::1
+EOF
+
+    # Generate private key
     openssl genrsa -out ./certs/server.key 2048
 
-    openssl req -new -key ./certs/server.key -out ./certs/server.csr \
-      -subj "/C=JP/ST=Tokyo/L=Tokyo/O=Development/CN=localhost"
-
-    openssl x509 -req -days 365 -in ./certs/server.csr \
-      -signkey ./certs/server.key -out ./certs/server.crt \
-      -extfile <(printf "subjectAltName=DNS:localhost,IP:127.0.0.1")
+    # Generate self-signed certificate with proper extensions for Firefox
+    openssl req -new -x509 -sha256 -days 365 \
+      -key ./certs/server.key \
+      -out ./certs/server.crt \
+      -config ./certs/openssl.cnf \
+      -extensions v3_req
 
     # Create PEM format
     cat ./certs/server.crt ./certs/server.key > ./certs/server.pem
 
-    # Clean up CSR
-    rm ./certs/server.csr
+    # Clean up config file
+    rm ./certs/openssl.cnf
 
     echo "  ✅ Self-signed certificates generated with openssl"
-    echo "  ⚠️  Note: Browsers will show security warnings for self-signed certificates"
-    echo "  💡 Tip: Install mkcert for trusted local certificates (brew install mkcert)"
+    echo ""
+    echo "  ⚠️  Firefox Security Warning:"
+    echo "  Browsers will show security warnings for self-signed certificates."
+    echo ""
+    echo "  🦊 For Firefox, you need to manually accept the certificate:"
+    echo "    1. Visit https://localhost:3001 in Firefox"
+    echo "    2. Click 'Advanced' → 'Accept the Risk and Continue'"
+    echo "    3. Visit https://localhost:5173 and repeat"
+    echo ""
+    echo "  💡 Recommended: Install mkcert for trusted local certificates"
+    echo "    macOS:   brew install mkcert"
+    echo "    Linux:   apt install mkcert / yum install mkcert"
+    echo "    Windows: choco install mkcert"
   fi
 
   # Set proper permissions
@@ -113,6 +153,7 @@ if [ -z "$SKIP_CERT" ]; then
 fi
 
 # Update backend/.env to enable HTTPS and set certificate paths
+# Note: Paths are relative to backend directory, so we need ../certs from backend/
 if [[ "$OSTYPE" == "darwin"* ]]; then
   sed -i '' 's|^HTTPS_ENABLED=.*|HTTPS_ENABLED=true|' backend/.env
   sed -i '' 's|^SSL_KEY_PATH=.*|SSL_KEY_PATH=../certs/server.key|' backend/.env
@@ -134,21 +175,20 @@ echo ""
 # ====================================
 echo "🌐 Step 3: Setting up frontend/.env..."
 
-if [ ! -f frontend/.env ]; then
-  cp frontend/.env.example frontend/.env
-  echo "  ✅ Copied frontend/.env.example → frontend/.env"
-else
-  echo "  ℹ️  frontend/.env already exists"
-fi
+# Create frontend/.env with proper HTTPS URLs
+cat > frontend/.env << 'EOF'
+# ================================
+# API Configuration
+# ================================
 
-# Update frontend .env to use HTTPS
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  sed -i '' 's|^VITE_API_BASE_URL=.*|VITE_API_BASE_URL=https://localhost:3001|' frontend/.env || echo "VITE_API_BASE_URL=https://localhost:3001" >> frontend/.env
-else
-  sed -i 's|^VITE_API_BASE_URL=.*|VITE_API_BASE_URL=https://localhost:3001|' frontend/.env || echo "VITE_API_BASE_URL=https://localhost:3001" >> frontend/.env
-fi
+# Backend API Base URL
+VITE_API_BASE_URL=https://localhost:3001/api
 
-echo "  ✅ Updated frontend/.env with HTTPS configuration"
+# WebSocket URL
+VITE_WS_URL=wss://localhost:3001/ws
+EOF
+
+echo "  ✅ Created frontend/.env with HTTPS configuration"
 
 echo ""
 

@@ -1,3 +1,36 @@
+# Transcendence - オンラインゲームプラットフォーム
+
+## 🚀 クイックスタート
+
+### 初回セットアップ
+```bash
+# 完全セットアップ（証明書、依存関係、環境変数）
+./setup.sh
+
+# 開発サーバー起動
+cd backend && npm run dev    # ターミナル1
+cd frontend && npm run dev   # ターミナル2
+```
+
+### 便利なスクリプト
+```bash
+# 環境のクリーンアップ
+./cleanup.sh                 # インタラクティブメニュー
+
+# 証明書の検証
+./verify-cert.sh             # Firefox互換性チェック
+
+# 証明書の再生成
+./setup.sh                   # 証明書のみ再生成を選択
+```
+
+### アクセスURL
+- **フロントエンド**: https://localhost:5173
+- **バックエンド**: https://localhost:3001
+- **WebSocket**: wss://localhost:3001/ws
+- **ヘルスチェック**: https://localhost:3001/health
+
+---
 
 # 技術スタック
 ## フロントエンド

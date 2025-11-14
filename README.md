@@ -24,6 +24,15 @@ cd frontend && npm run dev   # ターミナル2
 ./setup.sh                   # 証明書のみ再生成を選択
 ```
 
+### トラブルシューティング
+```bash
+# mkcert権限エラーが発生した場合
+# → setup.shは自動的にOpenSSLにフォールバックします
+
+# 詳細な解決方法は以下を参照:
+cat MKCERT_TROUBLESHOOTING.md
+```
+
 ### アクセスURL
 - **フロントエンド**: https://localhost:5173
 - **バックエンド**: https://localhost:3001

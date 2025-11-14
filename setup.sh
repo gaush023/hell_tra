@@ -61,33 +61,58 @@ fi
 
 if [ -z "$SKIP_CERT" ]; then
   # Try mkcert first (recommended for development)
+  MKCERT_SUCCESS=false
   if command -v mkcert &> /dev/null; then
-    echo "  📜 Using mkcert to generate certificates..."
+    echo "  📜 Attempting to use mkcert to generate certificates..."
 
-    # Ensure mkcert CA is installed
-    if ! mkcert -CAROOT &> /dev/null; then
-      echo "  Installing mkcert CA..."
-      mkcert -install
+    # Check if mkcert CA directory is writable
+    MKCERT_CA_ROOT=$(mkcert -CAROOT 2>/dev/null || echo "")
+
+    if [ -n "$MKCERT_CA_ROOT" ]; then
+      # Check if CA is already installed
+      if [ ! -f "$MKCERT_CA_ROOT/rootCA-key.pem" ]; then
+        echo "  Installing mkcert CA..."
+        if mkcert -install 2>/dev/null; then
+          echo "  ✅ mkcert CA installed successfully"
+        else
+          echo "  ⚠️  Failed to install mkcert CA (permission denied)"
+          echo "  💡 Try running: sudo chown -R $USER:$USER $MKCERT_CA_ROOT"
+          echo "  💡 Or run: CAROOT=\$HOME/.mkcert mkcert -install"
+          echo "  ℹ️  Falling back to OpenSSL..."
+        fi
+      fi
     fi
 
-    # Generate certificates for backend
-    cd ./backend/certs
-    mkcert localhost 127.0.0.1 ::1
-    mv localhost+2.pem server.crt
-    mv localhost+2-key.pem server.key
-    cd ../..
+    # Try to generate certificates with mkcert
+    if [ -f "$MKCERT_CA_ROOT/rootCA-key.pem" ] || mkcert -install 2>/dev/null; then
+      # Generate certificates for backend
+      cd ./backend/certs
+      if mkcert localhost 127.0.0.1 ::1 2>/dev/null; then
+        mv localhost+2.pem server.crt 2>/dev/null || mv localhost+*.pem server.crt
+        mv localhost+2-key.pem server.key 2>/dev/null || mv localhost+*-key.pem server.key
+        cd ../..
 
-    # Create PEM format for backend
-    cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
+        # Create PEM format for backend
+        cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
 
-    # Copy certificates to frontend
-    cp ./backend/certs/server.crt ./frontend/certs/server.crt
-    cp ./backend/certs/server.key ./frontend/certs/server.key
-    cp ./backend/certs/server.pem ./frontend/certs/server.pem
+        # Copy certificates to frontend
+        cp ./backend/certs/server.crt ./frontend/certs/server.crt
+        cp ./backend/certs/server.key ./frontend/certs/server.key
+        cp ./backend/certs/server.pem ./frontend/certs/server.pem
 
-    echo "  ✅ Certificates generated with mkcert"
-  else
-    echo "  ℹ️  mkcert not found, using openssl (self-signed certificates)..."
+        echo "  ✅ Certificates generated with mkcert"
+        MKCERT_SUCCESS=true
+      else
+        cd ../.. 2>/dev/null || true
+        echo "  ⚠️  mkcert certificate generation failed"
+        echo "  ℹ️  Falling back to OpenSSL..."
+      fi
+    fi
+  fi
+
+  # Fallback to OpenSSL if mkcert failed or is not available
+  if [ "$MKCERT_SUCCESS" = false ]; then
+    echo "  ℹ️  Using openssl to generate self-signed certificates..."
 
     # Create OpenSSL config for Firefox compatibility
     cat > ./backend/certs/openssl.cnf << 'EOF'
@@ -153,20 +178,20 @@ EOF
     echo "    macOS:   brew install mkcert"
     echo "    Linux:   apt install mkcert / yum install mkcert"
     echo "    Windows: choco install mkcert"
-  fi
+  fi  # End of MKCERT_SUCCESS check
 
   # Set proper permissions for backend certificates
-  chmod 600 ./backend/certs/server.key
-  chmod 644 ./backend/certs/server.crt
-  chmod 600 ./backend/certs/server.pem
+  chmod 600 ./backend/certs/server.key 2>/dev/null || true
+  chmod 644 ./backend/certs/server.crt 2>/dev/null || true
+  chmod 600 ./backend/certs/server.pem 2>/dev/null || true
 
   # Set proper permissions for frontend certificates
-  chmod 600 ./frontend/certs/server.key
-  chmod 644 ./frontend/certs/server.crt
-  chmod 600 ./frontend/certs/server.pem
+  chmod 600 ./frontend/certs/server.key 2>/dev/null || true
+  chmod 644 ./frontend/certs/server.crt 2>/dev/null || true
+  chmod 600 ./frontend/certs/server.pem 2>/dev/null || true
 
   echo "  ✅ Certificate permissions set"
-fi
+fi  # End of SKIP_CERT check
 
 # Update backend/.env to enable HTTPS and set certificate paths
 # Note: Paths are relative to backend directory, so we use certs/ (in the same directory)

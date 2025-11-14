@@ -51,9 +51,40 @@ fi
 echo ""
 
 # ====================================
-# Step 2: HTTPS Certificate Setup (No sudo, no mkcert)
+# Step 2: Docker .env Setup
 # ====================================
-echo "🔒 Step 2: Generating HTTPS certificates (sudo-free)..."
+echo "🐳 Step 2: Setting up .env.docker for Docker deployment..."
+
+if [ ! -f .env.docker ]; then
+  cp .env.docker.example .env.docker
+  echo "  ✅ Copied .env.docker.example → .env.docker"
+else
+  echo "  ℹ️  .env.docker already exists"
+fi
+
+# Ensure JWT_SECRET is strong
+if ! grep -q "JWT_SECRET=" .env.docker || grep -q "JWT_SECRET=CHANGE-THIS-TO-RANDOM-SECRET" .env.docker; then
+  JWT_SECRET=$(openssl rand -base64 32)
+  if grep -q "JWT_SECRET=" .env.docker; then
+    # Update existing JWT_SECRET
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      sed -i '' "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" .env.docker
+    else
+      sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" .env.docker
+    fi
+  else
+    # Add JWT_SECRET
+    echo "JWT_SECRET=${JWT_SECRET}" >> .env.docker
+  fi
+  echo "  ✅ Generated secure JWT_SECRET for Docker"
+fi
+
+echo ""
+
+# ====================================
+# Step 3: HTTPS Certificate Setup (No sudo, no mkcert)
+# ====================================
+echo "🔒 Step 3: Generating HTTPS certificates (sudo-free)..."
 
 # Create cert directories
 mkdir -p ./certs
@@ -121,9 +152,9 @@ echo "  ✅ Self-signed certificates generated (no sudo required)"
 echo "  ⚠️ Browsers will warn about security — this is normal for self-signed certificates."
 
 # ====================================
-# Step 3: Environment Selection
+# Step 4: Environment Selection
 # ====================================
-echo "🔧 Step 3: Environment Configuration..."
+echo "🔧 Step 4: Environment Configuration..."
 echo ""
 echo "Choose your deployment environment:"
 echo "  [1] Development mode (npm run dev) - Default ports"
@@ -166,9 +197,9 @@ esac
 echo ""
 
 # ====================================
-# Step 4: Backend .env Setup
+# Step 5: Backend .env Setup
 # ====================================
-echo "📋 Step 4: Updating backend/.env with environment-specific configuration..."
+echo "📋 Step 5: Updating backend/.env with environment-specific configuration..."
 
 # Update FRONTEND_URL in backend/.env
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -182,9 +213,9 @@ echo "  ✅ Backend FRONTEND_URL set to: ${FRONTEND_URL}"
 echo ""
 
 # ====================================
-# Step 5: Frontend .env Setup
+# Step 6: Frontend .env Setup
 # ====================================
-echo "🌐 Step 5: Setting up frontend/.env..."
+echo "🌐 Step 6: Setting up frontend/.env..."
 
 # Create frontend/.env with environment-specific URLs
 cat > frontend/.env << EOF
@@ -206,9 +237,9 @@ echo "     WebSocket URL: wss://localhost:3001/ws"
 echo ""
 
 # ====================================
-# Step 5.5: Fix Vite Port Configuration
+# Step 6.5: Fix Vite Port Configuration
 # ====================================
-echo "🔧 Step 5.5: Fixing Vite port configuration..."
+echo "🔧 Step 6.5: Fixing Vite port configuration..."
 
 # Update vite.config.ts to use the correct port
 if [ -f frontend/vite.config.ts ]; then
@@ -225,9 +256,9 @@ fi
 echo ""
 
 # ====================================
-# Step 6: Dependencies Installation
+# Step 7: Dependencies Installation
 # ====================================
-echo "📦 Step 6: Installing dependencies..."
+echo "📦 Step 7: Installing dependencies..."
 
 if [ -d backend/node_modules ]; then
   echo "  ℹ️  Backend dependencies already installed"
@@ -248,9 +279,9 @@ fi
 echo ""
 
 # ====================================
-# Step 7: Docker Setup (Optional)
+# Step 8: Docker Setup (Optional)
 # ====================================
-echo "🐳 Step 7: Docker setup..."
+echo "🐳 Step 8: Docker setup..."
 
 read -p "Do you want to build Docker images? (y/N): " -r REPLY
 echo
@@ -283,6 +314,7 @@ echo "  - frontend/certs/server.crt  (Frontend certificate)"
 echo "  - frontend/certs/server.pem  (Frontend combined PEM)"
 echo "  - backend/.env               (Backend configuration with HTTPS_ENABLED=true)"
 echo "  - frontend/.env              (Frontend configuration)"
+echo "  - .env.docker                (Docker deployment configuration)"
 echo ""
 echo "🚀 To start the application:"
 echo ""

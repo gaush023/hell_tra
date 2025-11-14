@@ -229,7 +229,20 @@ export async function userRoutes(fastify: FastifyInstance) {
       reply.send(friendRequest);
     } catch (error) {
       console.error('Send friend request error:', error);
-      reply.code(500).send({ error: 'Internal server error' });
+      const errorMessage = (error as Error).message || 'Unknown error';
+
+      // Return appropriate status codes based on error type
+      if (errorMessage.includes('Sender user not found')) {
+        return reply.code(401).send({ error: 'Your session is invalid. Please log out and log in again.' });
+      } else if (errorMessage.includes('Recipient user not found')) {
+        return reply.code(404).send({ error: 'User not found' });
+      } else if (errorMessage.includes('not found')) {
+        return reply.code(404).send({ error: errorMessage });
+      } else if (errorMessage.includes('already exists') || errorMessage.includes('already friends')) {
+        return reply.code(400).send({ error: errorMessage });
+      } else {
+        return reply.code(500).send({ error: `Internal server error: ${errorMessage}` });
+      }
     }
   });
 

@@ -408,6 +408,21 @@ export class UserService {
 
   // Friend request methods
   createFriendRequest(fromUserId: string, toUserId: string): FriendRequest {
+    console.log('createFriendRequest called:', { fromUserId, toUserId });
+
+    // Verify both users exist
+    const fromUser = this.getUserById(fromUserId);
+    if (!fromUser) {
+      console.error('From user not found:', fromUserId);
+      throw new Error('Sender user not found');
+    }
+
+    const toUser = this.getUserById(toUserId);
+    if (!toUser) {
+      console.error('To user not found:', toUserId);
+      throw new Error('Recipient user not found');
+    }
+
     // Check if request already exists
     const existingRequest = this.db.get<any>(
       'SELECT * FROM friend_requests WHERE from_user_id = ? AND to_user_id = ?',
@@ -415,6 +430,7 @@ export class UserService {
     );
 
     if (existingRequest) {
+      console.log('Friend request already exists:', existingRequest);
       throw new Error('Friend request already exists');
     }
 
@@ -425,19 +441,23 @@ export class UserService {
     );
 
     if (existingFriendship) {
+      console.log('Users are already friends:', existingFriendship);
       throw new Error('Users are already friends');
     }
 
     const requestId = crypto.randomUUID();
 
     console.log('Creating friend request:', { requestId, fromUserId, toUserId });
-    const result = this.db.run(
-      'INSERT INTO friend_requests (id, from_user_id, to_user_id, status) VALUES (?, ?, ?, ?)',
-      [requestId, fromUserId, toUserId, 'pending']
-    );
-    console.log('Friend request insert result:', result.changes, 'rows affected');
-
-    const fromUser = this.getUserById(fromUserId)!;
+    try {
+      const result = this.db.run(
+        'INSERT INTO friend_requests (id, from_user_id, to_user_id, status) VALUES (?, ?, ?, ?)',
+        [requestId, fromUserId, toUserId, 'pending']
+      );
+      console.log('Friend request insert result:', result.changes, 'rows affected');
+    } catch (error) {
+      console.error('Database error when creating friend request:', error);
+      throw new Error('Failed to create friend request in database');
+    }
 
     return {
       id: requestId,

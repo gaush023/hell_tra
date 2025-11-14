@@ -71,8 +71,7 @@ echo "  [7] Complete reset (⚠️  VERY DESTRUCTIVE)"
 echo "  [8] Custom selection"
 echo "  [0] Cancel"
 echo ""
-read -p "Enter your choice [0-8]: " -n 1 -r choice
-echo ""
+read -p "Enter your choice [0-8]: " -r choice
 echo ""
 
 case $choice in
@@ -238,34 +237,34 @@ case $choice in
     echo "📋 Custom cleanup..."
     echo ""
 
-    read -p "Clean backend node_modules? (y/N): " -n 1 -r; echo
+    read -p "Clean backend node_modules? (y/N): " -r REPLY; echo
     [[ $REPLY =~ ^[Yy]$ ]] && remove_item "backend/node_modules" "backend dependencies"
 
-    read -p "Clean frontend node_modules? (y/N): " -n 1 -r; echo
+    read -p "Clean frontend node_modules? (y/N): " -r REPLY; echo
     [[ $REPLY =~ ^[Yy]$ ]] && remove_item "frontend/node_modules" "frontend dependencies"
 
-    read -p "Clean build artifacts? (y/N): " -n 1 -r; echo
+    read -p "Clean build artifacts? (y/N): " -r REPLY; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       remove_item "frontend/dist" "frontend build output"
       remove_item "backend/dist" "backend build output"
     fi
 
-    read -p "Clean database? (y/N): " -n 1 -r; echo
+    read -p "Clean database? (y/N): " -r REPLY; echo
     [[ $REPLY =~ ^[Yy]$ ]] && remove_item "backend/database.db" "database"
 
-    read -p "Clean user uploads? (y/N): " -n 1 -r; echo
+    read -p "Clean user uploads? (y/N): " -r REPLY; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       remove_item "backend/uploads/avatars" "user avatars"
       mkdir -p backend/uploads/avatars
     fi
 
-    read -p "Clean certificates? (y/N): " -n 1 -r; echo
+    read -p "Clean certificates? (y/N): " -r REPLY; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       remove_item "backend/certs" "backend SSL certificates"
       remove_item "frontend/certs" "frontend SSL certificates"
     fi
 
-    read -p "Clean .env files? (y/N): " -n 1 -r; echo
+    read -p "Clean .env files? (y/N): " -r REPLY; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       remove_item "backend/.env" "backend environment file"
       remove_item "frontend/.env" "frontend environment file"

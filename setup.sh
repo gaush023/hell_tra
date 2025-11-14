@@ -102,31 +102,94 @@ echo "  ✅ Self-signed certificates generated (no sudo required)"
 echo "  ⚠️ Browsers will warn about security — this is normal for self-signed certificates."
 
 # ====================================
-# Step 3: Frontend .env Setup
+# Step 3: Environment Selection
 # ====================================
-echo "🌐 Step 3: Setting up frontend/.env..."
+echo "🔧 Step 3: Environment Configuration..."
+echo ""
+echo "Choose your deployment environment:"
+echo "  [1] Development mode (npm run dev) - Default ports"
+echo "  [2] Docker rootless mode - Ports 8080/8443"
+echo "  [3] Docker standard mode - Ports 80/443"
+echo ""
+read -p "Enter your choice [1-3] (default: 1): " -r ENV_CHOICE
+echo ""
 
-# Create frontend/.env with proper HTTPS URLs
-cat > frontend/.env << 'EOF'
+# Set default to 1 if empty
+ENV_CHOICE=${ENV_CHOICE:-1}
+
+case $ENV_CHOICE in
+  1)
+    BACKEND_URL="https://localhost:3001"
+    FRONTEND_URL="https://localhost:5173"
+    FRONTEND_PORT="5173"
+    echo "  ✅ Selected: Development mode"
+    ;;
+  2)
+    BACKEND_URL="https://localhost:3001"
+    FRONTEND_URL="https://localhost:8443"
+    FRONTEND_PORT="8443"
+    echo "  ✅ Selected: Docker rootless mode (ports 8080/8443)"
+    ;;
+  3)
+    BACKEND_URL="https://localhost:3001"
+    FRONTEND_URL="https://localhost"
+    FRONTEND_PORT="443"
+    echo "  ✅ Selected: Docker standard mode (ports 80/443)"
+    ;;
+  *)
+    echo "  ⚠️  Invalid choice, using Development mode"
+    BACKEND_URL="https://localhost:3001"
+    FRONTEND_URL="https://localhost:5173"
+    FRONTEND_PORT="5173"
+    ;;
+esac
+
+echo ""
+
+# ====================================
+# Step 4: Backend .env Setup
+# ====================================
+echo "📋 Step 4: Updating backend/.env with environment-specific configuration..."
+
+# Update FRONTEND_URL in backend/.env
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  sed -i '' "s|^FRONTEND_URL=.*|FRONTEND_URL=${FRONTEND_URL}|" backend/.env
+else
+  sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=${FRONTEND_URL}|" backend/.env
+fi
+
+echo "  ✅ Backend FRONTEND_URL set to: ${FRONTEND_URL}"
+
+echo ""
+
+# ====================================
+# Step 5: Frontend .env Setup
+# ====================================
+echo "🌐 Step 5: Setting up frontend/.env..."
+
+# Create frontend/.env with environment-specific URLs
+cat > frontend/.env << EOF
 # ================================
 # API Configuration
 # ================================
 
 # Backend API Base URL
-VITE_API_BASE_URL=https://localhost:3001/api
+VITE_API_BASE_URL=${BACKEND_URL}/api
 
 # WebSocket URL
 VITE_WS_URL=wss://localhost:3001/ws
 EOF
 
-echo "  ✅ Created frontend/.env with HTTPS configuration"
+echo "  ✅ Created frontend/.env"
+echo "     API URL: ${BACKEND_URL}/api"
+echo "     WebSocket URL: wss://localhost:3001/ws"
 
 echo ""
 
 # ====================================
-# Step 4: Dependencies Installation
+# Step 6: Dependencies Installation
 # ====================================
-echo "📦 Step 4: Installing dependencies..."
+echo "📦 Step 6: Installing dependencies..."
 
 if [ -d backend/node_modules ]; then
   echo "  ℹ️  Backend dependencies already installed"
@@ -147,11 +210,11 @@ fi
 echo ""
 
 # ====================================
-# Step 5: Docker Setup (Optional)
+# Step 7: Docker Setup (Optional)
 # ====================================
-echo "🐳 Step 5: Docker setup..."
+echo "🐳 Step 7: Docker setup..."
 
-read -p "Do you want to build Docker images? (y/N): " -n 1 -r
+read -p "Do you want to build Docker images? (y/N): " -r REPLY
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; then
@@ -182,16 +245,35 @@ echo "  - frontend/.env              (Frontend configuration)"
 echo ""
 echo "🚀 To start the application:"
 echo ""
-echo "  Option 1: Development mode (recommended)"
-echo "    Terminal 1: cd backend && npm run dev"
-echo "    Terminal 2: cd frontend && npm run dev"
-echo ""
-echo "  Option 2: Docker"
-echo "    docker-compose up"
-echo ""
-echo "🌐 Access URLs:"
-echo "  Frontend: https://localhost:5173"
-echo "  Backend:  https://localhost:3001"
+
+case $ENV_CHOICE in
+  1)
+    echo "  Development mode:"
+    echo "    Terminal 1: cd backend && npm run dev"
+    echo "    Terminal 2: cd frontend && npm run dev"
+    echo ""
+    echo "  🌐 Access URLs:"
+    echo "    Frontend: ${FRONTEND_URL}"
+    echo "    Backend:  ${BACKEND_URL}"
+    ;;
+  2)
+    echo "  Docker rootless mode:"
+    echo "    docker-compose up"
+    echo ""
+    echo "  🌐 Access URLs:"
+    echo "    Frontend: ${FRONTEND_URL} (HTTP: http://localhost:8080)"
+    echo "    Backend:  ${BACKEND_URL}"
+    ;;
+  3)
+    echo "  Docker standard mode (requires sudo):"
+    echo "    sudo docker-compose -f docker-compose.standard.yml up"
+    echo ""
+    echo "  🌐 Access URLs:"
+    echo "    Frontend: ${FRONTEND_URL} (HTTP: http://localhost)"
+    echo "    Backend:  ${BACKEND_URL}"
+    ;;
+esac
+
 echo ""
 echo "🔒 Certificate Info:"
 if [ "$MKCERT_SUCCESS" = true ]; then

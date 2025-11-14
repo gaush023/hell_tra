@@ -1,11 +1,14 @@
+# Standard Docker (requires root or docker group membership)
+# Usage: sudo docker-compose -f docker-compose.standard.yml up
+
 services:
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "8080:80"      # HTTP (redirects to HTTPS) - using unprivileged port
-      - "8443:443"     # HTTPS - using unprivileged port
+      - "80:80"        # Standard HTTP port
+      - "443:443"      # Standard HTTPS port
     volumes:
       - ./frontend/certs:/etc/nginx/ssl:ro
     depends_on:
@@ -29,7 +32,7 @@ services:
       - HTTPS_ENABLED=true
       - SSL_KEY_PATH=/app/certs/server.key
       - SSL_CERT_PATH=/app/certs/server.crt
-      - FRONTEND_URL=https://localhost:8443
+      - FRONTEND_URL=https://localhost
       - PORT=3001
       - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
       - DB_PATH=/app/database.db

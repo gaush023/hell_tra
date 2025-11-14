@@ -3,8 +3,12 @@ import { User, GameInvitation, FriendRequest, UserStats, MatchHistory, Leaderboa
 export class ApiService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:3001') {
-    this.baseUrl = baseUrl;
+  constructor(baseUrl?: string) {
+    // Use provided URL, or environment variable, or derive from current location
+    // Since nginx proxies /api to backend, we should use the same origin
+    this.baseUrl = baseUrl ||
+                   import.meta.env.VITE_API_BASE_URL ||
+                   `${window.location.origin}/api`;
   }
 
   async register(username: string, password: string): Promise<User> {
@@ -166,6 +170,7 @@ export class ApiService {
   }
 
   async sendFriendRequest(toUserId: string): Promise<FriendRequest> {
+    console.log('Sending friend request to:', `${this.baseUrl}/users/friend-request`, 'for userId:', toUserId);
     const response = await fetch(`${this.baseUrl}/users/friend-request`, {
       method: 'POST',
       headers: {
@@ -175,8 +180,12 @@ export class ApiService {
       body: JSON.stringify({ userId: toUserId }),
     });
 
+    console.log('Friend request response status:', response.status);
+
     if (!response.ok) {
-      throw new Error('Failed to send friend request');
+      const errorText = await response.text();
+      console.error('Friend request failed:', errorText);
+      throw new Error(`Failed to send friend request: ${response.status} ${errorText}`);
     }
 
     return response.json();

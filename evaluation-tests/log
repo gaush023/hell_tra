@@ -1,0 +1,285 @@
+
+> transcendence-evaluation-tests@1.0.0 test:all
+> node run-all-tests.js
+
+[36m
+🔍 Checking if server is running...[0m
+[32m✅ Server is running!
+[0m
+[1m
+╔════════════════════════════════════════════════════════════════════╗[0m
+[1m║     TRANSCENDENCE PROJECT - COMPREHENSIVE EVALUATION SUITE        ║[0m
+[1m╚════════════════════════════════════════════════════════════════════╝[0m
+[36m
+📋 Running all test suites...[0m
+[34mThis may take a few minutes.
+[0m
+[36m
+======================================================================[0m
+[1mRunning: Security Tests[0m
+[34mDescription: HTTPS, password hashing, SQL injection, XSS protection[0m
+[31mCritical: YES[0m
+[36m======================================================================[0m
+[1m
+╔════════════════════════════════════════════════════════════╗[0m
+[1m║        TRANSCENDENCE SECURITY EVALUATION TESTS            ║[0m
+[1m╚════════════════════════════════════════════════════════════╝[0m
+[36m
+Starting security tests...[0m
+[34mTarget URL: https://localhost:3001[0m
+[36m
+🧪 Testing: HTTPS/TLS Configuration[0m
+[32m  ✅ PASS: HTTPS endpoint is accessible[0m
+[33m  ⚠️  WARN: Could not verify TLS encryption details[0m
+[32m  ✅ PASS: HTTP endpoint is disabled (good security practice)[0m
+[36m
+🧪 Testing: Password Hashing (bcrypt)[0m
+[34m  ℹ️  INFO: Creating test user: testuser_1762975927607[0m
+[32m  ✅ PASS: User registration successful[0m
+[32m  ✅ PASS: Password is not exposed in API response[0m
+[32m  ✅ PASS: Password hashing works correctly (login successful)[0m
+[34m  ℹ️  INFO: bcrypt is being used for password hashing[0m
+[36m
+🧪 Testing: SQL Injection Protection[0m
+[32m  ✅ PASS: SQL injection payloads properly rejected[0m
+[34m  ℹ️  INFO: Prepared statements appear to be used correctly[0m
+[36m
+🧪 Testing: XSS (Cross-Site Scripting) Protection[0m
+[32m  ✅ PASS: XSS payloads appear to be sanitized[0m
+[34m  ℹ️  INFO: Input sanitization is working correctly[0m
+[36m
+🧪 Testing: JWT Token Security[0m
+[32m  ✅ PASS: JWT token returned on login[0m
+[31m  ❌ FAIL: Valid JWT token rejected by protected endpoint[0m
+[31m  ❌ FAIL: Protected endpoint accessible without JWT token![0m
+[31m  ❌ FAIL: Protected endpoint accepts invalid JWT token![0m
+[36m
+🧪 Testing: Environment Variables Security[0m
+[32m  ✅ PASS: .env file exists[0m
+[32m  ✅ PASS: .env is in .gitignore[0m
+[32m  ✅ PASS: No obvious weak secrets in .env[0m
+[32m  ✅ PASS: No obvious sensitive files in project root[0m
+[1m
+╔════════════════════════════════════════════════════════════╗[0m
+[1m║                    TEST SUMMARY                            ║[0m
+[1m╚════════════════════════════════════════════════════════════╝[0m
+[34m
+Total Tests: 14[0m
+[32mPassed: 11[0m
+[31mFailed: 3[0m
+[33mWarnings: 1[0m
+[31m
+Pass Rate: 78.57%[0m
+[31m
+⚠️  CRITICAL SECURITY ISSUES FOUND![0m
+[31mPlease review the failed tests above.[0m
+[36m
+======================================================================[0m
+[1mRunning: API Tests[0m
+[34mDescription: User registration, login, authentication, validation[0m
+[31mCritical: YES[0m
+[36m======================================================================[0m
+[0m
+╔════════════════════════════════════════════════════════════╗[0m
+[0m║           TRANSCENDENCE API EVALUATION TESTS              ║[0m
+[0m╚════════════════════════════════════════════════════════════╝[0m
+[34m
+Target URL: https://localhost:3001[0m
+[36m
+🧪 Testing: User Registration[0m
+[32m  ✅ PASS: Valid user registration works[0m
+[32m  ✅ PASS: Duplicate username properly rejected[0m
+[32m  ✅ PASS: Short username rejected[0m
+[32m  ✅ PASS: Short password rejected[0m
+[32m  ✅ PASS: Missing password rejected[0m
+[36m
+🧪 Testing: User Login[0m
+[32m  ✅ PASS: Valid login successful with token[0m
+[32m  ✅ PASS: Invalid password rejected[0m
+[32m  ✅ PASS: Non-existent user rejected[0m
+[32m  ✅ PASS: Missing password rejected[0m
+[36m
+🧪 Testing: Protected Endpoints[0m
+[31m  ❌ FAIL: Valid token rejected (404)[0m
+[31m  ❌ FAIL: Protected endpoint accessible without token! (404)[0m
+[31m  ❌ FAIL: Invalid token accepted! (404)[0m
+[36m
+🧪 Testing: Input Validation[0m
+[32m  ✅ PASS: Invalid JSON properly rejected[0m
+[32m  ✅ PASS: Empty strings properly rejected[0m
+[32m  ✅ PASS: Null values properly rejected[0m
+[32m  ✅ PASS: Extremely long username properly rejected[0m
+[36m
+🧪 Testing: Error Handling[0m
+[32m  ✅ PASS: Non-existent endpoint returns 404[0m
+[32m  ✅ PASS: Invalid HTTP method properly rejected[0m
+[32m  ✅ PASS: Missing Content-Type handled[0m
+[0m
+╔════════════════════════════════════════════════════════════╗[0m
+[0m║                    TEST SUMMARY                            ║[0m
+[0m╚════════════════════════════════════════════════════════════╝[0m
+[34m
+Total Tests: 19[0m
+[32mPassed: 16[0m
+[31mFailed: 3[0m
+[33mWarnings: 0[0m
+[32m
+Pass Rate: 84.21%[0m
+[31m
+⚠️  Some API tests failed. Please review.[0m
+[36m
+======================================================================[0m
+[1mRunning: Game Tests[0m
+[34mDescription: WebSocket, game creation, tournaments, state updates[0m
+[33mCritical: NO[0m
+[36m======================================================================[0m
+[36m
+======================================================================[0m
+[1mRunning: Integration Tests[0m
+[34mDescription: Full user flows, friend system, match history[0m
+[33mCritical: NO[0m
+[36m======================================================================[0m
+[36m
+
+======================================================================[0m
+[1mALL TESTS COMPLETED[0m
+[36m======================================================================[0m
+[0m
+
+╔════════════════════════════════════════════════════════════════════════╗
+║                   TRANSCENDENCE EVALUATION REPORT                      ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+Generated: 2025-11-12T19:32:15.111Z
+Project: ft_transcendence
+Evaluator: [Your Name Here]
+
+═══════════════════════════════════════════════════════════════════════════
+
+TEST RESULTS SUMMARY
+═══════════════════════════════════════════════════════════════════════════
+
+❌ FAIL [CRITICAL] Security Tests
+❌ FAIL [CRITICAL] API Tests
+❌ FAIL [OPTIONAL] Game Tests
+❌ FAIL [OPTIONAL] Integration Tests
+
+═══════════════════════════════════════════════════════════════════════════
+
+EVALUATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════
+
+SECURITY (CRITICAL - MUST PASS ALL):
+❌ HTTPS/TLS enabled
+❌ Password hashing (bcrypt)
+❌ No credentials in git
+❌ SQL injection protection
+❌ XSS protection
+❌ Server-side validation
+
+BASIC FUNCTIONALITY:
+❌ User registration works
+❌ User login works
+❌ Protected endpoints secured
+[ ] SPA navigation (manual test required)
+[ ] Browser compatibility (manual test required)
+
+GAME FUNCTIONALITY:
+⚠️  WebSocket connection
+⚠️  Game creation
+⚠️  Tournament support
+[ ] Local multiplayer (manual test required)
+[ ] Keyboard controls (manual test required)
+[ ] Game rules compliance (manual test required)
+
+INTEGRATION:
+⚠️  Full user journey
+⚠️  Friend system
+⚠️  Match history
+⚠️  Profile management
+
+═══════════════════════════════════════════════════════════════════════════
+
+MODULES IMPLEMENTED
+═══════════════════════════════════════════════════════════════════════════
+
+Based on the test results and codebase analysis:
+
+Major Modules (2 minor modules each):
+- [ ] Module 1: _________________________________
+- [ ] Module 2: _________________________________
+- [ ] Module 3: _________________________________
+
+Minor Modules:
+- [ ] Module 4: _________________________________
+- [ ] Module 5: _________________________________
+- [ ] Module 6: _________________________________
+- [ ] Module 7: _________________________________
+
+BONUS Modules:
+- [ ] Extra 1: _________________________________
+
+═══════════════════════════════════════════════════════════════════════════
+
+MANUAL TESTING NOTES
+═══════════════════════════════════════════════════════════════════════════
+
+Please perform the following manual tests and document results:
+
+1. SPA Navigation:
+   - Use browser Back/Forward buttons
+   - Result: _____________________
+
+2. Local Game:
+   - Test with 2 players on same keyboard
+   - Result: _____________________
+
+3. Tournament:
+   - Create tournament with 4+ players
+   - Verify matchmaking and bracket
+   - Result: _____________________
+
+4. Lag/Disconnect Handling:
+   - Simulate network issues
+   - Result: _____________________
+
+5. Module Demonstrations:
+   - Ask team to demonstrate each module
+   - Verify understanding and implementation
+   - Results: _____________________
+
+═══════════════════════════════════════════════════════════════════════════
+
+ISSUES FOUND
+═══════════════════════════════════════════════════════════════════════════
+
+List any issues, bugs, or concerns:
+
+1. _________________________________________________________________________
+2. _________________________________________________________________________
+3. _________________________________________________________________________
+
+═══════════════════════════════════════════════════════════════════════════
+
+OVERALL ASSESSMENT
+═══════════════════════════════════════════════════════════════════════════
+
+❌ CRITICAL TESTS FAILED - Security issues must be fixed!
+
+Automated Tests: 0 / 4 passed
+Security Status: INSECURE ❌
+Basic Functionality: ISSUES FOUND ❌
+
+Recommended Grade: ___ / 100
+
+Evaluator Signature: _______________________
+Date: 2025/11/13
+
+═══════════════════════════════════════════════════════════════════════════
+[0m
+[34m
+📄 Full report saved to: /Users/shuga/Projects/transcendence/evaluation-tests/test-results.txt[0m
+[31m
+🚨 CRITICAL FAILURE: Security or basic functionality tests failed![0m
+[31mThe project cannot pass evaluation until these issues are fixed.
+[0m

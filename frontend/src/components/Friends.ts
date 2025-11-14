@@ -1,5 +1,7 @@
 import { User, FriendRequest } from '../types/User';
 import { ApiService } from '../services/ApiService';
+import { sanitize } from '../utils/sanitize';
+
 
 export class Friends {
   private container: HTMLElement;
@@ -15,6 +17,26 @@ export class Friends {
     this.apiService = new ApiService();
     this.currentUser = currentUser;
     this.onBack = onBack;
+  }
+
+  private getAvatarUrl(avatar: string | null | undefined): string {
+    if (!avatar) {
+      const protocol = window.location.protocol;
+      const host = 'localhost:3001';
+      return `${protocol}//${host}/api/avatars/default.svg`;
+    }
+
+    if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+      return avatar;
+    }
+
+    if (avatar.startsWith('/api/avatars/')) {
+      const protocol = window.location.protocol;
+      const host = 'localhost:3001';
+      return `${protocol}//${host}${avatar}`;
+    }
+
+    return avatar;
   }
 
   async render(): Promise<void> {
@@ -109,12 +131,12 @@ export class Friends {
       <div class="bg-gray-600 p-3 rounded">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-              ${request.fromUser?.username?.charAt(0).toUpperCase() || '?'}
-            </div>
+            <img src="${this.getAvatarUrl(request.fromUser?.avatar)}"
+                 alt="${sanitize(request.fromUser?.username || 'User')}"
+                 class="w-8 h-8 rounded-full object-cover border-2 border-gray-500">
             <div>
-              <div class="text-white font-medium">${request.fromUser?.username || 'Unknown'}</div>
-              ${request.fromUser?.displayName ? `<div class="text-gray-300 text-sm">${request.fromUser.displayName}</div>` : ''}
+              <div class="text-white font-medium">${sanitize(request.fromUser?.username || 'Unknown')}</div>
+              ${request.fromUser?.displayName ? `<div class="text-gray-300 text-sm">${sanitize(request.fromUser.displayName)}</div>` : ''}
             </div>
           </div>
           <div class="flex space-x-2">
@@ -141,12 +163,12 @@ export class Friends {
       <div class="bg-gray-600 p-3 rounded">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-              ${friend.username.charAt(0).toUpperCase()}
-            </div>
+            <img src="${this.getAvatarUrl(friend.avatar)}"
+                 alt="${sanitize(friend.username)}"
+                 class="w-8 h-8 rounded-full object-cover border-2 border-gray-500">
             <div>
-              <div class="text-white font-medium">${friend.username}</div>
-              ${friend.displayName ? `<div class="text-gray-300 text-sm">${friend.displayName}</div>` : ''}
+              <div class="text-white font-medium">${sanitize(friend.username)}</div>
+              ${friend.displayName ? `<div class="text-gray-300 text-sm">${sanitize(friend.displayName)}</div>` : ''}
               <div class="flex items-center space-x-2 mt-1">
                 <div class="w-2 h-2 rounded-full ${friend.isOnline ? 'bg-green-500' : 'bg-gray-500'}"></div>
                 <span class="text-xs text-gray-400">${friend.isOnline ? 'Online' : 'Offline'}</span>
@@ -185,12 +207,12 @@ export class Friends {
         <div class="bg-gray-600 p-3 rounded">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
-              <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                ${user.username.charAt(0).toUpperCase()}
-              </div>
+              <img src="${this.getAvatarUrl(user.avatar)}"
+                   alt="${sanitize(user.username)}"
+                   class="w-8 h-8 rounded-full object-cover border-2 border-gray-500">
               <div>
-                <div class="text-white font-medium">${user.username}</div>
-                ${user.displayName ? `<div class="text-gray-300 text-sm">${user.displayName}</div>` : ''}
+                <div class="text-white font-medium">${sanitize(user.username)}</div>
+                ${user.displayName ? `<div class="text-gray-300 text-sm">${sanitize(user.displayName)}</div>` : ''}
               </div>
             </div>
             <div>

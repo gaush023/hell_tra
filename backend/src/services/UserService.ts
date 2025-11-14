@@ -3,23 +3,33 @@ import { DatabaseService } from '../database/DatabaseService';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 
+// XSS sanitization helper
+function sanitizeInput(input: string): string {
+  if (!input) return input;
+  return input
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+\s*=/gi, '') // Remove event handlers
+    .trim();
+}
+
 interface DatabaseUser {
   id: string;
   username: string;
   password_hash: string;
-  email: string | null;
-  display_name: string | null;
-  bio: string | null;
-  avatar: string | null;
+  email?: string;
+  display_name?: string;
+  bio?: string;
+  avatar?: string;
   is_online: number;
   is_in_game: number;
   created_at: string;
-  last_login_at: string | null;
+  last_login_at?: string;
 }
 
 export class UserService {
   private db: DatabaseService;
-  private saltRounds = 12;
+  private saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
 
   constructor() {
     this.db = DatabaseService.getInstance();
@@ -201,8 +211,8 @@ export class UserService {
       id: dbUser.id,
       username: dbUser.username,
       password: '', // Password should not be exposed
-      email: dbUser.email ?? null,
-      displayName: dbUser.display_name ?? null,
+      email: dbUser.email,
+      displayName: dbUser.display_name,
       bio: dbUser.bio,
       avatar: avatar,
       isOnline: dbUser.is_online === 1,
@@ -394,6 +404,21 @@ export class UserService {
 
   // Friend request methods
   createFriendRequest(fromUserId: string, toUserId: string): FriendRequest {
+    console.log('createFriendRequest called:', { fromUserId, toUserId });
+
+    // Verify both users exist
+    const fromUser = this.getUserById(fromUserId);
+    if (!fromUser) {
+      console.error('From user not found:', fromUserId);
+      throw new Error('Sender user not found');
+    }
+
+    const toUser = this.getUserById(toUserId);
+    if (!toUser) {
+      console.error('To user not found:', toUserId);
+      throw new Error('Recipient user not found');
+    }
+
     // Check if request already exists
     const existingRequest = this.db.get<any>(
       'SELECT * FROM friend_requests WHERE from_user_id = ? AND to_user_id = ?',
@@ -401,6 +426,7 @@ export class UserService {
     );
 
     if (existingRequest) {
+      console.log('Friend request already exists:', existingRequest);
       throw new Error('Friend request already exists');
     }
 
@@ -411,19 +437,23 @@ export class UserService {
     );
 
     if (existingFriendship) {
+      console.log('Users are already friends:', existingFriendship);
       throw new Error('Users are already friends');
     }
 
     const requestId = crypto.randomUUID();
 
     console.log('Creating friend request:', { requestId, fromUserId, toUserId });
-    const result = this.db.run(
-      'INSERT INTO friend_requests (id, from_user_id, to_user_id, status) VALUES (?, ?, ?, ?)',
-      [requestId, fromUserId, toUserId, 'pending']
-    );
-    console.log('Friend request insert result:', result.changes, 'rows affected');
-
-    const fromUser = this.getUserById(fromUserId)!;
+    try {
+      const result = this.db.run(
+        'INSERT INTO friend_requests (id, from_user_id, to_user_id, status) VALUES (?, ?, ?, ?)',
+        [requestId, fromUserId, toUserId, 'pending']
+      );
+      console.log('Friend request insert result:', result.changes, 'rows affected');
+    } catch (error) {
+      console.error('Database error when creating friend request:', error);
+      throw new Error('Failed to create friend request in database');
+    }
 
     return {
       id: requestId,
@@ -434,8 +464,8 @@ export class UserService {
       fromUser: {
         id: fromUser.id,
         username: fromUser.username,
-        displayName: fromUser.displayName ?? null,
-        avatar: fromUser.avatar ?? 'api/avatars/default.svg'
+        displayName: fromUser.displayName,
+        avatar: fromUser.avatar
       }
     };
   }
@@ -459,8 +489,8 @@ export class UserService {
         fromUser: {
           id: fromUser.id,
           username: fromUser.username,
-          displayName: fromUser.displayName ?? null,
-          avatar: fromUser.avatar ?? 'api/avatars/default.svg'
+          displayName: fromUser.displayName,
+          avatar: fromUser.avatar
         }
       };
     });
@@ -512,7 +542,7 @@ export class UserService {
   }
 
   // Update user profile
-  updateUserProfile(userId: string, updates: { displayName?: string; email?: string; bio?: string }): boolean {
+  updateUserProfile(userId: string, updates: { displayName?: string; bio?: string }): boolean {
     try {
       const user = this.getUserById(userId);
       if (!user) return false;
@@ -522,17 +552,11 @@ export class UserService {
 
       if (updates.displayName !== undefined) {
         setClause.push('display_name = ?');
-        values.push(updates.displayName);
+        values.push(sanitizeInput(updates.displayName));
       }
-
-      if (updates.email !== undefined) {
-        setClause.push('email = ?');
-        values.push(updates.email);
-      }
-
       if (updates.bio !== undefined) {
         setClause.push('bio = ?');
-        values.push(updates.bio);
+        values.push(sanitizeInput(updates.bio));
       }
 
       if (setClause.length === 0) return true; // No updates needed
@@ -563,6 +587,47 @@ export class UserService {
     } catch (error) {
       console.error('Update user avatar error:', error);
       return false;
+    }
+  }
+
+  // Get leaderboard
+  getLeaderboard(gameType?: 'pong' | 'tank', limit: number = 10): Array<{ user: User; stats: UserStats; rank: number }> {
+    try {
+      let users: User[];
+
+      if (gameType) {
+        // Get users sorted by game-specific stats
+        const dbUsers = this.db.all<DatabaseUser>(
+          `SELECT u.* FROM users u
+           INNER JOIN game_type_stats gts ON u.id = gts.user_id
+           WHERE gts.game_type = ? AND gts.games_played > 0
+           ORDER BY gts.win_rate DESC, gts.wins DESC
+           LIMIT ?`,
+          [gameType, limit]
+        );
+        users = dbUsers.map(dbUser => this.convertDbUserToUser(dbUser));
+      } else {
+        // Get users sorted by overall stats
+        const dbUsers = this.db.all<DatabaseUser>(
+          `SELECT u.* FROM users u
+           INNER JOIN user_stats us ON u.id = us.user_id
+           WHERE us.total_games > 0
+           ORDER BY us.win_rate DESC, us.wins DESC
+           LIMIT ?`,
+          [limit]
+        );
+        users = dbUsers.map(dbUser => this.convertDbUserToUser(dbUser));
+      }
+
+      // Add rank to each entry
+      return users.map((user, index) => ({
+        user,
+        stats: user.stats,
+        rank: index + 1
+      }));
+    } catch (error) {
+      console.error('Get leaderboard error:', error);
+      return [];
     }
   }
 

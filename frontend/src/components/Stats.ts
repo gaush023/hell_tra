@@ -1,5 +1,6 @@
 import { User, UserStats, LeaderboardEntry } from '../types/User';
 import { ApiService } from '../services/ApiService';
+import { sanitize } from '../utils/sanitize';
 
 export class Stats {
   private container: HTMLElement;
@@ -268,16 +269,16 @@ export class Stats {
                     ${entry.rank}
                   </div>
                   <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                    ${entry.user.username.charAt(0).toUpperCase()}
+                    ${sanitize(entry.user.username.charAt(0).toUpperCase())}
                   </div>
                   <div>
-                    <div class="text-white font-medium ${isCurrentUser ? 'text-blue-400' : ''}">${entry.user.username}</div>
-                    ${entry.user.displayName ? `<div class="text-gray-300 text-sm">${entry.user.displayName}</div>` : ''}
+                    <div class="text-white font-medium ${isCurrentUser ? 'text-blue-400' : ''}">${sanitize(entry.user.username)}</div>
+                    ${entry.user.displayName ? `<div class="text-gray-300 text-sm">${sanitize(entry.user.displayName)}</div>` : ''}
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-white font-bold">${entry.stats.wins}W - ${entry.stats.losses}L</div>
-                  <div class="text-yellow-400 text-sm">${entry.stats.winRate.toFixed(1)}% WR</div>
+                  <div class="text-white font-bold">${sanitize(String(entry.stats.wins))}W - ${sanitize(String(entry.stats.losses))}L</div>
+                  <div class="text-yellow-400 text-sm">${sanitize(entry.stats.winRate.toFixed(1))}% WR</div>
                 </div>
               </div>
             </div>

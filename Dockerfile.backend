@@ -1,14 +1,24 @@
-FROM node:18-alpine
+FROM node:20-alpine
+
+# Install build dependencies for better-sqlite3
+RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-COPY backend/package*.json ./
+COPY backend/package.json ./
+
+# Install dependencies (will build better-sqlite3 for Linux)
 RUN npm install
 
-COPY backend/ ./
+# Copy source files (excluding node_modules which is already built)
+COPY backend/src ./src
+COPY backend/tsconfig.json ./
 
 RUN npm run build
 
-EXPOSE 3001
+# Create uploads directory for avatars
+RUN mkdir -p /app/uploads/avatars
 
-CMD ["npm", "start"]
+ENV NODE_ENV=production
+
+CMD ["node", "dist/index.js"]

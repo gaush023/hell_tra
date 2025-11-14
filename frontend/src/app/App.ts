@@ -5,10 +5,12 @@ import { PongGame } from '../game/PongGame';
 import { TankGame } from '../game/TankGame';
 import { WebSocketService } from '../services/WebSocketService';
 import { User } from '../types/User';
+import { Router, Route } from '../router/Router';
 
 export class App {
   private container: HTMLElement;
   private wsService: WebSocketService;
+  private router: Router;
   private currentUser: User | null = null;
   private currentGame: PongGame | null = null;
   private currentTankGame: TankGame | null = null;
@@ -19,6 +21,12 @@ export class App {
   constructor() {
     this.container = document.getElementById('app')!;
     this.wsService = new WebSocketService();
+    this.router = new Router();
+
+    // Set up router handler
+    this.router.onRouteChange((route: Route) => {
+      this.handleRouteChange(route);
+    });
   }
 
   async init(): Promise<void> {
@@ -27,16 +35,53 @@ export class App {
 
     if (savedUser && token) {
       this.currentUser = JSON.parse(savedUser);
-      await this.showUserList();
-    } else {
-      this.showLogin();
+    }
+
+    // Initialize router with current URL
+    this.router.init();
+  }
+
+  private async handleRouteChange(route: Route): Promise<void> {
+    // Check authentication for protected routes
+    const isAuthenticated = !!localStorage.getItem('token') && !!this.currentUser;
+
+    if (!isAuthenticated && route.name !== 'login') {
+      // Redirect to login if not authenticated
+      this.router.replace({ name: 'login' });
+      return;
+    }
+
+    // Handle route
+    switch (route.name) {
+      case 'login':
+        this.showLogin();
+        break;
+      case 'userlist':
+        await this.showUserList();
+        break;
+      case 'pong-game':
+        await this.startGame(route.gameId);
+        break;
+      case 'tank-game':
+        await this.startTankGame(route.gameId);
+        break;
+      case 'tournament':
+        this.showTournament();
+        break;
+      default:
+        // Unknown route, redirect to appropriate page
+        if (isAuthenticated) {
+          this.router.replace({ name: 'userlist' });
+        } else {
+          this.router.replace({ name: 'login' });
+        }
     }
   }
 
   private showLogin(): void {
     const loginForm = new LoginForm(this.container, async (user: User) => {
       this.currentUser = user;
-      await this.showUserList();
+      this.router.navigate({ name: 'userlist' });
     });
     loginForm.render();
   }
@@ -168,10 +213,10 @@ export class App {
         this.tournament.returnFromGame();
       } else {
         // トーナメントコンポーネントが存在しない場合は新規作成
-        this.showTournament();
+        this.router.navigate({ name: 'tournament' });
       }
     } else {
-      this.showUserList();
+      this.router.navigate({ name: 'userlist' });
     }
   }
 
@@ -260,7 +305,7 @@ export class App {
       this.resizeHandler = null;
     }
 
-    this.showUserList();
+    this.router.navigate({ name: 'userlist' });
   }
 
   private showTournament(): void {
@@ -279,6 +324,6 @@ export class App {
   private endTournament(): void {
     this.inTournament = false;
     this.tournament = null;
-    this.showUserList();
+    this.router.navigate({ name: 'userlist' });
   }
 }

@@ -11,11 +11,41 @@ import { TankGameService } from './services/TankGameService';
 import { WebSocketService } from './services/WebSocketService';
 import { DatabaseService } from './database/DatabaseService';
 import path from 'path';
+<<<<<<< HEAD
 import metrics, { httpRequestsTotal } from './metrics';
 
+=======
+import fs from 'fs';
+import dotenv from 'dotenv';
+
+// Load environment variables (optional - will use defaults if .env doesn't exist)
+try {
+  dotenv.config({ path: path.join(__dirname, '../../.env') });
+} catch (e) {
+  console.log('No .env file found, using default configuration');
+}
+
+// HTTPS Configuration with defaults
+const sslKeyPath = path.join(__dirname, '../../', process.env.SSL_KEY_PATH || 'certs/server.key');
+const sslCertPath = path.join(__dirname, '../../', process.env.SSL_CERT_PATH || 'certs/server.crt');
+
+// Check if SSL certificates exist
+const certsExist = fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath);
+
+// Enable HTTPS if certificates exist (unless explicitly disabled)
+const httpsEnabled = process.env.HTTPS_ENABLED === 'true' && certsExist;
+
+const httpsOptions = httpsEnabled ? {
+  https: {
+    key: fs.readFileSync(sslKeyPath),
+    cert: fs.readFileSync(sslCertPath)
+  }
+} : {};
+>>>>>>> 42original
 
 const fastify = Fastify({
-  logger: true
+  logger: true,
+  ...httpsOptions
 });
 
 fastify.register(metrics);
@@ -28,23 +58,25 @@ fastify.register(multipart, {
 
 // Serve static files for avatar uploads
 fastify.register(staticFiles, {
-  root: path.join(process.cwd(), 'uploads'),
+  root: path.join(process.cwd(), 'uploads', 'avatars'),
   prefix: '/api/avatars/',
   decorateReply: false
 });
 
-// Add CORS support globally
+// Add CORS support globally - using onRequest to catch all requests early
 fastify.addHook('onRequest', async (request, reply) => {
-  reply.header('Access-Control-Allow-Origin', '*');
-  reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-});
+  const origin = process.env.FRONTEND_URL || 'https://localhost';
 
-// Handle OPTIONS requests globally
-fastify.addHook('preHandler', async (request, reply) => {
+  // Set CORS headers for all requests
+  reply.header('Access-Control-Allow-Origin', origin);
+  reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+  reply.header('Access-Control-Allow-Credentials', 'true');
+  reply.header('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+
+  // Handle OPTIONS preflight immediately
   if (request.method === 'OPTIONS') {
-    reply.code(200).send();
-    return reply;
+    reply.code(204).send();
   }
 });
 
@@ -69,10 +101,10 @@ fastify.register(async function (fastify) {
   // Pass userService and gameService to routes
   fastify.decorate('userService', userService);
   fastify.decorate('gameService', gameService);
-  
-  await fastify.register(authRoutes);
-  await fastify.register(userRoutes);
-  await fastify.register(gameRoutes);
+
+  await fastify.register(authRoutes, { prefix: '/api' });
+  await fastify.register(userRoutes, { prefix: '/api' });
+  await fastify.register(gameRoutes, { prefix: '/api' });
 });
 
 fastify.register(async function (fastify) {
@@ -89,14 +121,23 @@ fastify.get('/health', async () => {
 
 const start = async () => {
   try {
-    await fastify.listen({ port: 3001, host: '0.0.0.0' });
-    console.log('Server is running on http://localhost:3001');
+    const port = parseInt(process.env.PORT || '3001', 10);
+    await fastify.listen({ port, host: '0.0.0.0' });
+    const protocol = (httpsEnabled && certsExist) ? 'https' : 'http';
+    console.log(`\n🚀 Server is running on ${protocol}://localhost:${port}`);
+    console.log(`📡 WebSocket: ${protocol === 'https' ? 'wss' : 'ws'}://localhost:${port}/ws`);
+    console.log(`🔒 HTTPS: ${httpsEnabled && certsExist ? 'Enabled ✓' : 'Disabled (using HTTP)'}`);
+    if (httpsEnabled && !certsExist) {
+      console.log('⚠️  HTTPS_ENABLED=true but certificates not found. Run ./generate-certs.sh');
+    }
+    console.log('');
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
   }
 };
 
+<<<<<<< HEAD
 fastify.addHook('onResponse', (request, reply, done) => {
   httpRequestsTotal.inc({
     method: request.method,
@@ -107,4 +148,6 @@ fastify.addHook('onResponse', (request, reply, done) => {
   done();
 });
 
+=======
+>>>>>>> 42original
 start();

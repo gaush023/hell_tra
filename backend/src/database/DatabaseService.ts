@@ -1,10 +1,30 @@
-// Simplified in-memory database for Docker compatibility
+import Database from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
+
+// File-based SQLite database with better-sqlite3
 export class DatabaseService {
-  private tables: Map<string, any[]> = new Map();
+  private db: Database.Database;
   private static instance: DatabaseService;
 
   private constructor() {
-    this.initializeTables();
+    // Database file path (relative to project root)
+    const dbPath = path.join(process.cwd(), process.env.DB_PATH || 'database.db');
+
+    // Ensure the directory exists
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+
+    // Initialize database connection
+    this.db = new Database(dbPath);
+
+    // Enable foreign keys and WAL mode for better performance
+    this.db.pragma('foreign_keys = ON');
+    this.db.pragma('journal_mode = WAL');
+
+    console.log(`SQLite database initialized at: ${dbPath}`);
   }
 
   public static getInstance(): DatabaseService {
@@ -14,370 +34,184 @@ export class DatabaseService {
     return DatabaseService.instance;
   }
 
-  private initializeTables(): void {
-    this.tables.set('users', []);
-    this.tables.set('user_stats', []);
-    this.tables.set('game_type_stats', []);
-    this.tables.set('friend_requests', []);
-    this.tables.set('friendships', []);
-    this.tables.set('match_history', []);
-    console.log('In-memory database tables initialized');
+  public async initialize(): Promise<void> {
+    this.createTables();
+    console.log('Database tables initialized successfully');
   }
 
-  public async initialize(): Promise<void> {
-    console.log('Database initialized successfully (in-memory)');
+  private createTables(): void {
+    // Users table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        email TEXT,
+        display_name TEXT,
+        bio TEXT,
+        avatar TEXT,
+        is_online INTEGER DEFAULT 0,
+        is_in_game INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_login_at DATETIME
+      )
+    `);
+
+    // User stats table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS user_stats (
+        user_id TEXT PRIMARY KEY,
+        total_games INTEGER DEFAULT 0,
+        wins INTEGER DEFAULT 0,
+        losses INTEGER DEFAULT 0,
+        win_rate REAL DEFAULT 0.0,
+        tournament_wins INTEGER DEFAULT 0,
+        longest_win_streak INTEGER DEFAULT 0,
+        current_win_streak INTEGER DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Game type stats table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS game_type_stats (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        game_type TEXT NOT NULL,
+        games_played INTEGER DEFAULT 0,
+        wins INTEGER DEFAULT 0,
+        losses INTEGER DEFAULT 0,
+        win_rate REAL DEFAULT 0.0,
+        average_game_duration INTEGER DEFAULT 0,
+        best_score INTEGER DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id, game_type)
+      )
+    `);
+
+    // Friend requests table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS friend_requests (
+        id TEXT PRIMARY KEY,
+        from_user_id TEXT NOT NULL,
+        to_user_id TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(from_user_id, to_user_id)
+      )
+    `);
+
+    // Friendships table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS friendships (
+        user_id TEXT NOT NULL,
+        friend_id TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, friend_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Match history table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS match_history (
+        id TEXT PRIMARY KEY,
+        game_id TEXT,
+        game_type TEXT NOT NULL,
+        game_mode TEXT,
+        player_id TEXT NOT NULL,
+        opponent_ids TEXT,
+        opponent_names TEXT,
+        result TEXT NOT NULL,
+        score INTEGER,
+        opponent_scores TEXT,
+        duration INTEGER,
+        date_played DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_ranked INTEGER DEFAULT 0,
+        tournament_id TEXT,
+        FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    console.log('Database tables created/verified');
   }
 
   public run(sql: string, params: any[] = []): any {
-    // Simplified implementation for basic CRUD operations
-    const normalizedSql = sql.replace(/\s+/g, ' ').trim();
-    console.log('[DB.run] Executing SQL:', normalizedSql, 'with params:', params);
-    if (normalizedSql.includes('INSERT INTO users')) {
-      const users = this.tables.get('users')!;
-      const user = {
-        id: params[0],
-        username: params[1],
-        password_hash: params[2],
-        created_at: new Date().toISOString(),
-        email: null,
-        display_name: null,
-        bio: null,
-        avatar: null,
-        is_online: 0,
-        is_in_game: 0,
-        last_login_at: null
-      };
-      users.push(user);
-      return { lastInsertRowid: users.length, changes: 1 };
-    }
-
-    if (sql.includes('INSERT INTO user_stats')) {
-      const stats = this.tables.get('user_stats')!;
-      const stat = {
-        user_id: params[0],
-        total_games: params[1],
-        wins: params[2],
-        losses: params[3],
-        win_rate: params[4],
-        tournament_wins: params[5],
-        longest_win_streak: params[6],
-        current_win_streak: params[7]
-      };
-      stats.push(stat);
-      return { lastInsertRowid: stats.length, changes: 1 };
-    }
-
-    if (sql.includes('INSERT INTO game_type_stats')) {
-      const gameStats = this.tables.get('game_type_stats')!;
-      const stat = {
-        id: params[0],
-        user_id: params[1],
-        game_type: params[2],
-        games_played: params[3],
-        wins: params[4],
-        losses: params[5],
-        win_rate: params[6],
-        average_game_duration: params[7],
-        best_score: params[8]
-      };
-      gameStats.push(stat);
-      return { lastInsertRowid: gameStats.length, changes: 1 };
-    }
-
-    if (sql.includes('UPDATE users SET is_online')) {
-      const users = this.tables.get('users')!;
-      const userId = params[params.length - 1];
-      const user = users.find(u => u.id === userId);
-      if (user) {
-        user.is_online = params[0];
-        if (params.length > 2) {
-          user.last_login_at = params[1];
-        }
-        return { changes: 1 };
-      }
-      return { changes: 0 };
-    }
-
-    if (sql.includes('UPDATE users SET is_in_game')) {
-      const users = this.tables.get('users')!;
-      const userId = params[1];
-      const user = users.find(u => u.id === userId);
-      if (user) {
-        user.is_in_game = params[0];
-        return { changes: 1 };
-      }
-      return { changes: 0 };
-    }
-
-    if (sql.includes('UPDATE users SET avatar')) {
-      const users = this.tables.get('users')!;
-      const avatarUrl = params[0];
-      const userId = params[1];
-      const user = users.find(u => u.id === userId);
-      if (user) {
-        user.avatar = avatarUrl;
-        return { changes: 1 };
-      }
-      return { changes: 0 };
-    }
-
-    if (sql.includes('UPDATE user_stats SET')) {
-      const stats = this.tables.get('user_stats')!;
-      const userId = params[6]; // user_id is the last parameter
-      const stat = stats.find(s => s.user_id === userId);
-      if (stat) {
-        stat.total_games = params[0];
-        stat.wins = params[1];
-        stat.losses = params[2];
-        stat.win_rate = params[3];
-        stat.longest_win_streak = params[4];
-        stat.current_win_streak = params[5];
-        return { changes: 1 };
-      }
-      return { changes: 0 };
-    }
-
-    if (sql.includes('UPDATE game_type_stats SET')) {
-      const gameStats = this.tables.get('game_type_stats')!;
-      const userId = params[6]; // user_id is the 7th parameter
-      const gameType = params[7]; // game_type is the 8th parameter
-      const stat = gameStats.find(s => s.user_id === userId && s.game_type === gameType);
-      if (stat) {
-        stat.games_played = params[0];
-        stat.wins = params[1];
-        stat.losses = params[2];
-        stat.win_rate = params[3];
-        stat.average_game_duration = params[4];
-        stat.best_score = params[5];
-        return { changes: 1 };
-      }
-      return { changes: 0 };
-    }
-
-    if(sql.includes('UPDATE users SET display_name') || sql.includes('UPDATE users SET email') || sql.includes('UPDATE users SET bio')) {
-        const users = this.tables.get('users')!;
-        const userId = params[params.length - 1];
-        const user = users.find(u => u.id === userId);
-        if (!user) return { changes: 0 };
-        
-        let paramIndex = 0;
-        if (sql.includes('display_name = ?')) {
-            user.display_name = params[paramIndex++];
-        }
-        if (sql.includes('email = ?')) {
-            user.email = params[paramIndex++];
-        }
-        if (sql.includes('bio = ?')) {
-            user.bio = params[paramIndex++];
-        }
-        return { changes: 1 };
-    }
-
-
-    if (sql.includes('INSERT INTO friend_requests')) {
-      const friendRequests = this.tables.get('friend_requests')!;
-      const request = {
-        id: params[0],
-        from_user_id: params[1],
-        to_user_id: params[2],
-        status: params[3],
-        created_at: new Date().toISOString()
-      };
-      friendRequests.push(request);
-      return { lastInsertRowid: friendRequests.length, changes: 1 };
-    }
-
-    if (sql.includes('INSERT INTO friendships')) {
-      const friendships = this.tables.get('friendships')!;
-      const friendship = {
-        user_id: params[0],
-        friend_id: params[1],
-        created_at: new Date().toISOString()
-      };
-      friendships.push(friendship);
-      return { lastInsertRowid: friendships.length, changes: 1 };
-    }
-
-    if (sql.includes('UPDATE friend_requests SET status')) {
-      const friendRequests = this.tables.get('friend_requests')!;
-      const requestId = params[1];
-      const request = friendRequests.find(r => r.id === requestId);
-      if (request) {
-        request.status = params[0];
-        return { changes: 1 };
-      }
-      return { changes: 0 };
-    }
-
-    if (sql.includes('INSERT INTO match_history')) {
-      const matchHistory = this.tables.get('match_history')!;
-      const match = {
-        id: params[0],
-        game_id: params[1],
-        game_type: params[2],
-        game_mode: params[3],
-        player_id: params[4],
-        opponent_ids: params[5],
-        opponent_names: params[6],
-        result: params[7],
-        score: params[8],
-        opponent_scores: params[9],
-        duration: params[10],
-        date_played: params[11],
-        is_ranked: params[12],
-        tournament_id: params[13]
-      };
-      matchHistory.push(match);
-      console.log('Match history record inserted:', match);
-      return { lastInsertRowid: matchHistory.length, changes: 1 };
-    }
-
-    return { lastInsertRowid: 0, changes: 0 };
+    const stmt = this.db.prepare(sql);
+    const info = stmt.run(...params);
+    return {
+      lastInsertRowid: info.lastInsertRowid,
+      changes: info.changes
+    };
   }
 
-    public get<T = any>(sql: string, params: any[] = []): T | undefined {
-
-    const normalizedSql = sql.replace(/\s+/g, ' ').trim();
-    console.log('[DB.get] Executing SQL:', normalizedSql, 'with params:', params);
-    if (normalizedSql.includes('FROM users') && normalizedSql.includes('WHERE id =')) {
-        const users = this.tables.get('users')!;
-        const user = users.find(u => u.id === params[0]);
-        console.log('[DB.get] SELECT user by id:', params[0], '=>', user);
-        return user as T;
-    }
-
-    if (normalizedSql.includes('FROM users') && normalizedSql.includes('WHERE username =')) {
-        const users = this.tables.get('users')!;
-        const user = users.find(u => u.username === params[0]);
-        console.log('[DB.get] SELECT user by username:', params[0], '=>', user);
-        return user as T;
-    }
-
-    if (normalizedSql.includes('SELECT password_hash FROM users WHERE username = ?')) {
-        const users = this.tables.get('users')!;
-        const user = users.find(u => u.username === params[0]);
-        return user ? { password_hash: user.password_hash } as T : undefined;
-    }
-
-    if (normalizedSql.includes('FROM user_stats') && normalizedSql.includes('WHERE user_id =')) {
-        const stats = this.tables.get('user_stats')!;
-        return stats.find(s => s.user_id === params[0]) as T;
-    }
-
-    if (normalizedSql.includes('FROM game_type_stats') && normalizedSql.includes('WHERE user_id =') && normalizedSql.includes('AND game_type =')) {
-        const stats = this.tables.get('game_type_stats')!;
-        const [userId, gameType] = params;
-        return stats.find(s => s.user_id === userId && s.game_type === gameType) as T;
-    }
-
-    if (normalizedSql.includes('FROM friend_requests') && normalizedSql.includes('WHERE from_user_id =') && normalizedSql.includes('AND to_user_id =')) {
-        const friendRequests = this.tables.get('friend_requests')!;
-        return friendRequests.find(r => r.from_user_id === params[0] && r.to_user_id === params[1]) as T;
-    }
-
-    if (normalizedSql.includes('FROM friend_requests') && normalizedSql.includes('WHERE id =') && normalizedSql.includes('AND to_user_id =')) {
-        const friendRequests = this.tables.get('friend_requests')!;
-        return friendRequests.find(r => r.id === params[0] && r.to_user_id === params[1]) as T;
-    }
-
-    if (normalizedSql.includes('FROM friendships')) {
-        const friendships = this.tables.get('friendships')!;
-        if (params.length === 4) {
-        return friendships.find(f =>
-            (f.user_id === params[0] && f.friend_id === params[1]) ||
-            (f.user_id === params[2] && f.friend_id === params[3])
-        ) as T;
-        }
-    }
-
-    console.warn('[DB.get] No matching SQL handler for query:', sql);
-    return undefined;
-    }
+  public get<T = any>(sql: string, params: any[] = []): T | undefined {
+    const stmt = this.db.prepare(sql);
+    return stmt.get(...params) as T | undefined;
+  }
 
   public all<T = any>(sql: string, params: any[] = []): T[] {
-    const normalizedSql = sql.replace(/\s+/g, ' ').trim();
-    console.log('[DB.get] Executing SQL:', normalizedSql, 'with params:', params);
-    if (normalizedSql.includes('SELECT * FROM users WHERE is_online = 1')) {
-      const users = this.tables.get('users')!;
-      return users.filter(u => u.is_online === 1) as T[];
-    }
-
-    if (normalizedSql.includes('SELECT * FROM users')) {
-      const users = this.tables.get('users')!;
-      return users as T[];
-    }
-
-    if (normalizedSql.includes('SELECT * FROM friend_requests WHERE to_user_id = ? AND status = ?')) {
-      const friendRequests = this.tables.get('friend_requests')!;
-      return friendRequests.filter(r => r.to_user_id === params[0] && r.status === params[1]) as T[];
-    }
-
-    if (normalizedSql.includes('SELECT friend_id FROM friendships WHERE user_id = ?')) {
-      const friendships = this.tables.get('friendships')!;
-      return friendships.filter(f => f.user_id === params[0]) as T[];
-    }
-
-    if (normalizedSql.includes('SELECT * FROM match_history WHERE player_id = ?')) {
-      const matchHistory = this.tables.get('match_history')!;
-      const matches = matchHistory.filter(m => m.player_id === params[0]);
-      // Sort by date_played DESC and apply LIMIT/OFFSET
-      const sorted = matches.sort((a, b) => new Date(b.date_played).getTime() - new Date(a.date_played).getTime());
-      const limit = params[1] || sorted.length;
-      const offset = params[2] || 0;
-      console.log(`Found ${matches.length} matches for player ${params[0]}, returning ${limit} with offset ${offset}`);
-      return sorted.slice(offset, offset + limit) as T[];
-    }
-
-    return [];
+    const stmt = this.db.prepare(sql);
+    return stmt.all(...params) as T[];
   }
 
   public transaction<T>(callback: () => T): T {
-    try {
-      return callback();
-    } catch (error) {
-      throw error;
-    }
+    const transaction = this.db.transaction(callback);
+    return transaction();
   }
 
   public close(): void {
-    console.log('Database connection closed (in-memory)');
+    this.db.close();
+    console.log('Database connection closed');
   }
 
   // Helper methods for common database operations
   public exists(table: string, where: string, params: any[] = []): boolean {
-    return false; // Simplified
+    const sql = `SELECT EXISTS(SELECT 1 FROM ${table} WHERE ${where}) as exists`;
+    const result = this.get<{ exists: number }>(sql, params);
+    return result?.exists === 1;
   }
 
   public count(table: string, where?: string, params: any[] = []): number {
-    const tableData = this.tables.get(table);
-    return tableData ? tableData.length : 0;
+    const sql = where
+      ? `SELECT COUNT(*) as count FROM ${table} WHERE ${where}`
+      : `SELECT COUNT(*) as count FROM ${table}`;
+    const result = this.get<{ count: number }>(sql, params);
+    return result?.count || 0;
   }
 
   public insert(table: string, data: Record<string, any>): string {
-    const tableData = this.tables.get(table);
-    if (tableData) {
-      tableData.push(data);
-      return tableData.length.toString();
-    }
-    return '0';
+    const keys = Object.keys(data);
+    const placeholders = keys.map(() => '?').join(', ');
+    const sql = `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`;
+    const result = this.run(sql, Object.values(data));
+    return result.lastInsertRowid.toString();
   }
 
   public update(table: string, data: Record<string, any>, where: string, whereParams: any[] = []): number {
-    return 0; // Simplified
+    const setClause = Object.keys(data).map(key => `${key} = ?`).join(', ');
+    const sql = `UPDATE ${table} SET ${setClause} WHERE ${where}`;
+    const result = this.run(sql, [...Object.values(data), ...whereParams]);
+    return result.changes;
   }
 
   public delete(table: string, where: string, params: any[] = []): number {
-    return 0; // Simplified
+    const sql = `DELETE FROM ${table} WHERE ${where}`;
+    const result = this.run(sql, params);
+    return result.changes;
   }
 
   // Debug method to inspect table contents
   public debugTable(tableName: string): any[] {
-    const table = this.tables.get(tableName);
-    if (table) {
-      console.log(`Table '${tableName}' contains ${table.length} records:`, table);
-      return table;
-    } else {
-      console.log(`Table '${tableName}' not found`);
+    try {
+      const rows = this.all(`SELECT * FROM ${tableName}`);
+      console.log(`Table '${tableName}' contains ${rows.length} records:`, rows);
+      return rows;
+    } catch (error) {
+      console.log(`Error reading table '${tableName}':`, error);
       return [];
     }
   }

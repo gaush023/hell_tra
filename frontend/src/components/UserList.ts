@@ -5,6 +5,7 @@ import { Profile } from './Profile';
 import { Friends } from './Friends';
 import { MatchHistory } from './MatchHistory';
 import { Stats } from './Stats';
+import { sanitize } from '../utils/sanitize';
 
 export class UserList {
   private container: HTMLElement;
@@ -27,6 +28,26 @@ export class UserList {
     this.onGameStart = onGameStart;
     this.onTankGameStart = onTankGameStart || onGameStart;
     this.onTournamentStart = onTournamentStart || (() => {});
+  }
+
+  private getAvatarUrl(avatar: string | null | undefined): string {
+    if (!avatar) {
+      const protocol = window.location.protocol;
+      const host = 'localhost:3001';
+      return `${protocol}//${host}/api/avatars/default.svg`;
+    }
+
+    if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+      return avatar;
+    }
+
+    if (avatar.startsWith('/api/avatars/')) {
+      const protocol = window.location.protocol;
+      const host = 'localhost:3001';
+      return `${protocol}//${host}${avatar}`;
+    }
+
+    return avatar;
   }
 
   async init(): Promise<void> {
@@ -56,8 +77,10 @@ export class UserList {
     });
 
     this.wsService.on('queueUpdate', (data: { waiting: number; needed: number }) => {
-      const queueInfo = document.getElementById('queue-info')!;
-      queueInfo.textContent = `Waiting for players: ${data.waiting}/4 (${data.needed} more needed)`;
+      const queueInfo = document.getElementById('queue-info');
+      if (queueInfo) {
+        queueInfo.textContent = `Waiting for players: ${data.waiting}/4 (${data.needed} more needed)`;
+      }
     });
 
     this.wsService.on('leftQueue', () => {
@@ -76,8 +99,10 @@ export class UserList {
 
     // 4-player tank queue listeners
     this.wsService.on('tankQueueUpdate', (data: { waiting: number; needed: number }) => {
-      const queueInfo = document.getElementById('tank-queue-info')!;
-      queueInfo.textContent = `Waiting for players: ${data.waiting}/4 (${data.needed} more needed)`;
+      const queueInfo = document.getElementById('tank-queue-info');
+      if (queueInfo) {
+        queueInfo.textContent = `Waiting for players: ${data.waiting}/4 (${data.needed} more needed)`;
+      }
     });
 
     this.wsService.on('leftTankQueue', () => {
@@ -111,7 +136,7 @@ export class UserList {
             <div class="flex justify-between items-center mb-6">
               <h1 class="text-3xl font-bold text-white">Transcendence Pong</h1>
               <div class="flex items-center space-x-4">
-                <span class="text-green-400">Welcome, ${this.currentUser.displayName || this.currentUser.username}!</span>
+                <span class="text-green-400">Welcome, ${sanitize(this.currentUser.username)}!</span>
                 <button id="profile-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
                   👤 Profile
                 </button>
@@ -198,7 +223,9 @@ export class UserList {
   }
 
   private renderFriendsList(): void {
-    const userListContainer = document.getElementById('user-list')!;
+    const userListContainer = document.getElementById('user-list');
+
+    if (!userListContainer) return;
 
     // Filter friends who are also in the online users list
     const onlineFriends = this.friends.filter(friend => {
@@ -210,7 +237,7 @@ export class UserList {
       return {
         ...friend,
         ...onlineUser,
-        avatar: onlineUser?.avatar || friend.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg'
+        avatar: onlineUser?.avatar || friend.avatar
       };
     });
 
@@ -223,14 +250,14 @@ export class UserList {
       <div class="flex items-center justify-between bg-gray-600 p-3 rounded">
         <div class="flex items-center space-x-3">
           <div class="relative">
-            <img src="${friend.avatar || 'http://localhost:3001/api/avatars/avatars/default.svg'}"
-                 alt="${friend.username}"
+            <img src="${this.getAvatarUrl(friend.avatar)}"
+                 alt="${sanitize(friend.username)}"
                  class="w-8 h-8 rounded-full object-cover border-2 border-gray-400">
             <div class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${friend.isOnline ? 'bg-green-500' : 'bg-gray-500'} border-2 border-gray-600"></div>
           </div>
           <div>
-            <span class="text-white font-medium">${friend.username}</span>
-            ${friend.displayName ? `<div class="text-gray-300 text-sm">${friend.displayName}</div>` : ''}
+            <span class="text-white font-medium">${sanitize(friend.username)}</span>
+            ${friend.displayName ? `<div class="text-gray-300 text-sm">${sanitize(friend.displayName)}</div>` : ''}
             ${friend.isInGame ? '<span class="text-yellow-400 text-sm">(In Game)</span>' : ''}
           </div>
         </div>
@@ -355,28 +382,30 @@ export class UserList {
   }
 
   private showInvitationModal(invitation: any): void {
-    const modal = document.getElementById('invitation-modal')!;
-    const text = document.getElementById('invitation-text')!;
-    const acceptBtn = document.getElementById('accept-invitation')!;
-    const declineBtn = document.getElementById('decline-invitation')!;
+    const modal = document.getElementById('invitation-modal');
+    const text = document.getElementById('invitation-text');
+    const acceptBtn = document.getElementById('accept-invitation');
+    const declineBtn = document.getElementById('decline-invitation');
 
-    text.textContent = `${invitation.fromUser.username} has challenged you to a game!`;
+    if (!modal || !text || !acceptBtn || !declineBtn) return;
+
+    text.textContent = `${sanitize(invitation.fromUser.username)} has challenged you to a game!`;
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
     acceptBtn.onclick = () => {
-      this.wsService.send('gameInviteResponse', { 
-        invitationId: invitation.id, 
-        response: 'accept' 
+      this.wsService.send('gameInviteResponse', {
+        invitationId: invitation.id,
+        response: 'accept'
       });
       modal.classList.add('hidden');
       modal.classList.remove('flex');
     };
 
     declineBtn.onclick = () => {
-      this.wsService.send('gameInviteResponse', { 
-        invitationId: invitation.id, 
-        response: 'decline' 
+      this.wsService.send('gameInviteResponse', {
+        invitationId: invitation.id,
+        response: 'decline'
       });
       modal.classList.add('hidden');
       modal.classList.remove('flex');
@@ -384,12 +413,14 @@ export class UserList {
   }
 
   private showTankInvitationModal(invitation: any): void {
-    const modal = document.getElementById('invitation-modal')!;
-    const text = document.getElementById('invitation-text')!;
-    const acceptBtn = document.getElementById('accept-invitation')!;
-    const declineBtn = document.getElementById('decline-invitation')!;
+    const modal = document.getElementById('invitation-modal');
+    const text = document.getElementById('invitation-text');
+    const acceptBtn = document.getElementById('accept-invitation');
+    const declineBtn = document.getElementById('decline-invitation');
 
-    text.textContent = `${invitation.fromUser.username} has challenged you to a tank battle!`;
+    if (!modal || !text || !acceptBtn || !declineBtn) return;
+
+    text.textContent = `${sanitize(invitation.fromUser.username)} has challenged you to a tank battle!`;
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
@@ -413,9 +444,11 @@ export class UserList {
   }
 
   private updateQueueButton(): void {
-    const button = document.getElementById('join-4player-queue')! as HTMLButtonElement;
-    const queueInfo = document.getElementById('queue-info')!;
-    
+    const button = document.getElementById('join-4player-queue') as HTMLButtonElement;
+    const queueInfo = document.getElementById('queue-info');
+
+    if (!button || !queueInfo) return;
+
     if (this.inQueue4Player) {
       button.textContent = '❌ Leave Queue';
       button.className = 'bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold text-lg';
@@ -428,8 +461,10 @@ export class UserList {
   }
 
   private updateTankQueueButton(): void {
-    const button = document.getElementById('join-4player-tank-queue')! as HTMLButtonElement;
-    const queueInfo = document.getElementById('tank-queue-info')!;
+    const button = document.getElementById('join-4player-tank-queue') as HTMLButtonElement;
+    const queueInfo = document.getElementById('tank-queue-info');
+
+    if (!button || !queueInfo) return;
 
     if (this.inTankQueue4Player) {
       button.textContent = '❌ Leave Tank Queue';

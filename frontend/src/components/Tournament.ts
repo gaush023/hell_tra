@@ -1,5 +1,6 @@
 import { WebSocketService } from '../services/WebSocketService';
 import { User } from '../types/User';
+import { sanitize } from '../utils/sanitize';
 
 interface TournamentMatch {
   id: string;
@@ -317,7 +318,7 @@ export class Tournament {
         return `
           <div class="mt-4 p-4 bg-blue-900 bg-opacity-50 rounded-lg">
             <p class="text-lg text-blue-200 font-semibold">🔴 Live Match</p>
-            <p class="text-xl text-white">${player1} <span class="text-yellow-400">VS</span> ${player2}</p>
+            <p class="text-xl text-white">${sanitize(player1)} <span class="text-yellow-400">VS</span> ${sanitize(player2)}</p>
             <p class="text-sm text-blue-300 mt-1">
               ${playingMatch.round === 1 ? 'Semifinal' : 'Final'} ${playingMatch.matchNumber} in progress
             </p>
@@ -334,7 +335,7 @@ export class Tournament {
         return `
           <div class="mt-4 p-4 bg-green-900 bg-opacity-50 rounded-lg">
             <p class="text-green-200">⏳ Your next match</p>
-            <p class="text-white">${this.getPlayerName(nextMatch.player1Id)} <span class="text-yellow-400">VS</span> ${this.getPlayerName(nextMatch.player2Id)}</p>
+            <p class="text-white">${sanitize(this.getPlayerName(nextMatch.player1Id))} <span class="text-yellow-400">VS</span> ${sanitize(this.getPlayerName(nextMatch.player2Id))}</p>
             <p class="text-sm text-green-300 mt-1">
               ${nextMatch.round === 1 ? 'Semifinal' : 'Final'} ${nextMatch.matchNumber} - Starting soon
             </p>
@@ -359,7 +360,7 @@ export class Tournament {
           <div class="flex items-center justify-between p-2 rounded ${
             match.winnerId === match.player1Id ? 'bg-green-600' : 'bg-gray-700'
           }">
-            <span>${player1Name}</span>
+            <span>${sanitize(player1Name)}</span>
             ${match.winnerId === match.player1Id ? '<span class="text-yellow-400">👑</span>' : ''}
           </div>
 
@@ -368,7 +369,7 @@ export class Tournament {
           <div class="flex items-center justify-between p-2 rounded ${
             match.winnerId === match.player2Id ? 'bg-green-600' : 'bg-gray-700'
           }">
-            <span>${player2Name}</span>
+            <span>${sanitize(player2Name)}</span>
             ${match.winnerId === match.player2Id ? '<span class="text-yellow-400">👑</span>' : ''}
           </div>
         </div>
@@ -401,7 +402,7 @@ export class Tournament {
       <div class="mt-8 text-center">
         <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-6">
           <h3 class="text-2xl font-bold mb-2">🏆 Tournament Champion! 🏆</h3>
-          <p class="text-xl">${winnerName}</p>
+          <p class="text-xl">${sanitize(winnerName)}</p>
         </div>
         <p class="mt-4 text-gray-400">Returning to menu in 3 seconds...</p>
       </div>

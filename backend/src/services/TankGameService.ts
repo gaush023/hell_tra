@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { MetricsService } from './MetricsService';
 
 export interface TankPlayer {
   id: string;
@@ -69,9 +70,11 @@ export class TankGameService {
   private invitations: Map<string, TankGameInvitation> = new Map();
   private waitingRoom4Player: string[] = [];
   private userService: any; // Import UserService properly
+  private metricsService: MetricsService;
 
   constructor(userService: any) {
     this.userService = userService;
+    this.metricsService = MetricsService.getInstance();
   }
 
   private readonly TANK_SPEED = 0.1;
@@ -170,6 +173,11 @@ export class TankGameService {
 
     game.status = 'playing';
     this.startGameLoop(gameId);
+
+    // Track Tank game metrics
+    this.metricsService.tankGamesTotal.inc({ status: 'started' });
+    this.metricsService.tankGamesActive.inc();
+
     return true;
   }
 
@@ -359,6 +367,10 @@ export class TankGameService {
       clearInterval(interval);
       this.gameIntervals.delete(gameId);
     }
+
+    // Track Tank game metrics
+    this.metricsService.tankGamesTotal.inc({ status: 'finished' });
+    this.metricsService.tankGamesActive.dec();
 
     return true;
   }

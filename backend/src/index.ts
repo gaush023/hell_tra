@@ -5,11 +5,13 @@ import multipart from '@fastify/multipart';
 import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
 import { gameRoutes } from './routes/game';
+import { testMetricsRoutes } from './routes/test-metrics';
 import { UserService } from './services/UserService';
 import { GameService } from './services/GameService';
 import { TankGameService } from './services/TankGameService';
 import { WebSocketService } from './services/WebSocketService';
 import { DatabaseService } from './database/DatabaseService';
+import { MetricsService } from './services/MetricsService';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
@@ -43,6 +45,9 @@ const fastify = Fastify({
   ...httpsOptions
 });
 
+// Initialize metrics service
+const metricsService = MetricsService.getInstance();
+
 fastify.register(websocket);
 fastify.register(multipart, {
   limits: {
@@ -72,6 +77,31 @@ fastify.addHook('onRequest', async (request, reply) => {
   if (request.method === 'OPTIONS') {
     reply.code(204).send();
   }
+
+  // Start metrics timer
+  (request as any).metricsStartTime = process.hrtime();
+});
+
+// Track HTTP request metrics
+fastify.addHook('onResponse', async (request, reply) => {
+  // Skip metrics endpoint to avoid recursion
+  if (request.url === '/metrics') {
+    return;
+  }
+
+  const route = request.routeOptions?.url || request.url || 'unknown';
+  const method = request.method;
+  const statusCode = reply.statusCode.toString();
+
+  // Increment request counter
+  metricsService.httpRequestsTotal.inc({ method, route, status_code: statusCode });
+
+  // Record request duration
+  if ((request as any).metricsStartTime) {
+    const [seconds, nanoseconds] = process.hrtime((request as any).metricsStartTime);
+    const duration = seconds + nanoseconds / 1e9;
+    metricsService.httpRequestDuration.observe({ method, route, status_code: statusCode }, duration);
+  }
 });
 
 // Initialize database first
@@ -99,6 +129,7 @@ fastify.register(async function (fastify) {
   await fastify.register(authRoutes, { prefix: '/api' });
   await fastify.register(userRoutes, { prefix: '/api' });
   await fastify.register(gameRoutes, { prefix: '/api' });
+  await fastify.register(testMetricsRoutes); // Test endpoints for metrics
 });
 
 fastify.register(async function (fastify) {
@@ -111,6 +142,12 @@ fastify.register(async function (fastify) {
 
 fastify.get('/health', async () => {
   return { status: 'OK', timestamp: new Date().toISOString() };
+});
+
+// Prometheus metrics endpoint
+fastify.get('/metrics', async (request, reply) => {
+  reply.header('Content-Type', metricsService.getContentType());
+  return metricsService.getMetrics();
 });
 
 const start = async () => {

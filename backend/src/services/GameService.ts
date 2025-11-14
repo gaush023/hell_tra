@@ -1,5 +1,6 @@
 import { Game, GameInvitation, GamePlayer } from '../models/User';
 import { UserService } from './UserService';
+import { MetricsService } from './MetricsService';
 import crypto from 'crypto';
 
 export class GameService {
@@ -8,9 +9,11 @@ export class GameService {
   private gameIntervals: Map<string, NodeJS.Timeout> = new Map();
   private waitingRoom4Player: string[] = []; // 4人対戦待機中のプレイヤーID
   private userService: UserService;
+  private metricsService: MetricsService;
 
   constructor(userService: UserService) {
     this.userService = userService;
+    this.metricsService = MetricsService.getInstance();
   }
 
   createInvitation(fromUserId: string, toUserId: string): GameInvitation {
@@ -111,6 +114,11 @@ export class GameService {
 
     game.status = 'playing';
     this.startGameLoop(gameId);
+
+    // Track Pong game metrics
+    this.metricsService.pongGamesTotal.inc({ status: 'started' });
+    this.metricsService.pongGamesActive.inc();
+
     return true;
   }
 
@@ -147,6 +155,10 @@ export class GameService {
       clearInterval(interval);
       this.gameIntervals.delete(gameId);
     }
+
+    // Track Pong game metrics
+    this.metricsService.pongGamesTotal.inc({ status: 'finished' });
+    this.metricsService.pongGamesActive.dec();
 
     return true;
   }

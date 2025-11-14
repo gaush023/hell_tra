@@ -88,8 +88,6 @@ echo "🔒 Step 3: Generating HTTPS certificates (sudo-free)..."
 
 # Create cert directories
 mkdir -p ./certs
-mkdir -p ./backend/certs
-mkdir -p ./frontend/certs
 
 echo "  📜 Generating self-signed certificate with OpenSSL..."
 
@@ -139,11 +137,6 @@ cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/serv
 cp ./backend/certs/server.crt ./certs/server.crt
 cp ./backend/certs/server.key ./certs/server.key
 cp ./backend/certs/server.pem ./certs/server.pem
-
-# Copy to frontend
-cp ./backend/certs/server.crt ./frontend/certs/server.crt
-cp ./backend/certs/server.key ./frontend/certs/server.key
-cp ./backend/certs/server.pem ./frontend/certs/server.pem
 
 # Cleanup
 rm ./backend/certs/openssl.cnf

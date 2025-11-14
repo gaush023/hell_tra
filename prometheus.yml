@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s # デフォルトのスクレイプ間隔
+  evaluation_interval: 15s # ルール評価の間隔
+
+# Alertmanager configuration (オプション)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+# スクレイプ設定
+scrape_configs:
+  # Prometheus 自身を監視
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Fastify バックエンドのメトリクスを収集
+  - job_name: 'fastify-backend'
+    static_configs:
+      - targets: ['host.docker.internal:3002']
+        labels:
+          service: 'transcendence-backend'
+          environment: 'development'
+    metrics_path: '/metrics'
+    scrape_interval: 5s # より頻繁にスクレイプ

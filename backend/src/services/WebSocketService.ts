@@ -4,6 +4,7 @@ import { UserService } from './UserService';
 import { GameService } from './GameService';
 import { TankGameService } from './TankGameService';
 import { TournamentService } from './TournamentService';
+import { MetricsService } from './MetricsService';
 import { verifyToken } from '../middleware/auth';
 
 interface SocketConnection {
@@ -17,17 +18,23 @@ export class WebSocketService {
   private gameService: GameService;
   private tankGameService: TankGameService;
   private tournamentService: TournamentService;
+  private metricsService: MetricsService;
 
   constructor(userService: UserService, gameService: GameService, tankGameService: TankGameService) {
     this.userService = userService;
     this.gameService = gameService;
     this.tankGameService = tankGameService;
     this.tournamentService = new TournamentService(gameService, tankGameService);
+    this.metricsService = MetricsService.getInstance();
   }
 
   async handleConnection(connection: WebSocket, request: any): Promise<void> {
     const connectionId = this.generateConnectionId();
     this.connections.set(connectionId, { socket: connection });
+
+    // Track WebSocket connection metrics
+    this.metricsService.wsConnectionsTotal.inc({ status: 'connected' });
+    this.metricsService.wsActiveConnections.inc();
 
     // Send welcome message immediately after connection
     this.sendToConnection(connection, 'welcome', {
@@ -81,6 +88,9 @@ export class WebSocketService {
       console.error('WebSocket: Connection not found for', connectionId);
       return;
     }
+
+    // Track WebSocket message metrics
+    this.metricsService.wsMessagesTotal.inc({ type: message.type || 'unknown', direction: 'inbound' });
 
     // Support both message.data and top-level parameters for backward compatibility
     const messageData = message.data || message;
@@ -392,6 +402,10 @@ export class WebSocketService {
       this.broadcastUserUpdate();
     }
     this.connections.delete(connectionId);
+
+    // Track WebSocket disconnection metrics
+    this.metricsService.wsConnectionsTotal.inc({ status: 'disconnected' });
+    this.metricsService.wsActiveConnections.dec();
   }
 
   private startGameStateUpdates(gameId: string): void {
@@ -495,6 +509,9 @@ export class WebSocketService {
       isInGame: user.isInGame
     }));
 
+    // Update online users metric
+    this.metricsService.onlineUsers.set(users.length);
+
     this.connections.forEach((connection) => {
       if (connection.userId) {
         this.sendToConnection(connection.socket, 'userUpdate', users);
@@ -513,12 +530,14 @@ export class WebSocketService {
 
   private sendToConnection(target: string | WebSocket, type: string, data: any): void {
     try {
-      const socket = typeof target === 'string' 
-        ? this.connections.get(target)?.socket 
+      const socket = typeof target === 'string'
+        ? this.connections.get(target)?.socket
         : target;
-        
+
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type, data }));
+        // Track outbound WebSocket message metrics
+        this.metricsService.wsMessagesTotal.inc({ type: type, direction: 'outbound' });
       }
     } catch (error) {
       console.error('Failed to send WebSocket message:', error);

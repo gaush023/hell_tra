@@ -17,10 +17,21 @@ export class UserList {
   private onGameStart: (gameId: string) => void;
   private onTankGameStart: (gameId: string) => void;
   private onTournamentStart: () => void;
+  private onLocalPongStart: () => void;
+  private onLocalTankStart: () => void;
   private inQueue4Player: boolean = false;
   private inTankQueue4Player: boolean = false;
 
-  constructor(container: HTMLElement, currentUser: User, wsService: WebSocketService, onGameStart: (gameId: string) => void, onTankGameStart?: (gameId: string) => void, onTournamentStart?: () => void) {
+  constructor(
+    container: HTMLElement,
+    currentUser: User,
+    wsService: WebSocketService,
+    onGameStart: (gameId: string) => void,
+    onTankGameStart?: (gameId: string) => void,
+    onTournamentStart?: () => void,
+    onLocalPongStart?: () => void,
+    onLocalTankStart?: () => void
+  ) {
     this.container = container;
     this.apiService = new ApiService();
     this.wsService = wsService;
@@ -28,6 +39,8 @@ export class UserList {
     this.onGameStart = onGameStart;
     this.onTankGameStart = onTankGameStart || onGameStart;
     this.onTournamentStart = onTournamentStart || (() => {});
+    this.onLocalPongStart = onLocalPongStart || (() => {});
+    this.onLocalTankStart = onLocalTankStart || (() => {});
   }
 
   private getAvatarUrl(avatar: string | null | undefined): string {
@@ -165,6 +178,23 @@ export class UserList {
                 <button id="start-tournament" class="bg-yellow-500 hover:bg-yellow-600 text-black px-6 py-3 rounded-lg font-bold w-full">
                   🎯 Join Tournament
                 </button>
+              </div>
+
+              <!-- Local Multiplayer Section -->
+              <div class="bg-gradient-to-r from-green-600 to-teal-600 p-4 rounded-lg mb-4">
+                <h3 class="text-xl font-bold text-white mb-2">🎮 Local Multiplayer</h3>
+                <p class="text-green-100 text-sm mb-3">Play with a friend on the same computer!</p>
+                <div class="grid grid-cols-2 gap-2">
+                  <button id="start-local-pong" class="bg-white hover:bg-gray-200 text-green-700 px-4 py-2 rounded-lg font-bold">
+                    🏓 Local Pong
+                  </button>
+                  <button id="start-local-tank" class="bg-white hover:bg-gray-200 text-green-700 px-4 py-2 rounded-lg font-bold">
+                    🚗 Local Tank
+                  </button>
+                </div>
+                <div class="text-center text-green-100 text-xs mt-2">
+                  Player 1: WASD | Player 2: Arrow Keys
+                </div>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -368,6 +398,19 @@ export class UserList {
     startTournamentBtn.addEventListener('click', () => {
       console.log('Starting tournament mode');
       this.onTournamentStart();
+    });
+
+    // Local game buttons
+    const localPongBtn = document.getElementById('start-local-pong')!;
+    localPongBtn.addEventListener('click', () => {
+      console.log('Starting local pong game');
+      this.onLocalPongStart();
+    });
+
+    const localTankBtn = document.getElementById('start-local-tank')!;
+    localTankBtn.addEventListener('click', () => {
+      console.log('Starting local tank game');
+      this.onLocalTankStart();
     });
   }
 

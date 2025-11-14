@@ -3,6 +3,8 @@ import { UserList } from '../components/UserList';
 import { Tournament } from '../components/Tournament';
 import { PongGame } from '../game/PongGame';
 import { TankGame } from '../game/TankGame';
+import { LocalPongGame } from '../game/LocalPongGame';
+import { LocalTankGame } from '../game/LocalTankGame';
 import { WebSocketService } from '../services/WebSocketService';
 import { User } from '../types/User';
 import { Router, Route } from '../router/Router';
@@ -14,6 +16,8 @@ export class App {
   private currentUser: User | null = null;
   private currentGame: PongGame | null = null;
   private currentTankGame: TankGame | null = null;
+  private currentLocalPongGame: LocalPongGame | null = null;
+  private currentLocalTankGame: LocalTankGame | null = null;
   private tournament: Tournament | null = null;
   private resizeHandler: (() => void) | null = null;
   private inTournament: boolean = false;
@@ -104,9 +108,11 @@ export class App {
         this.wsService,
         (gameId: string) => this.startGame(gameId),
         (gameId: string) => this.startTankGame(gameId),
-        () => this.showTournament()
+        () => this.showTournament(),
+        () => this.startLocalPong(),
+        () => this.startLocalTank()
       );
-      
+
       await userList.init();
       console.log('User list initialized successfully');
     } catch (error) {
@@ -324,6 +330,157 @@ export class App {
   private endTournament(): void {
     this.inTournament = false;
     this.tournament = null;
+    this.router.navigate({ name: 'userlist' });
+  }
+
+  private startLocalPong(): void {
+    this.container.innerHTML = `
+      <div class="fixed inset-0 bg-gray-900 flex flex-col">
+        <div class="bg-gray-800 p-4 shadow-lg">
+          <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-white">Local Pong - 2 Players</h1>
+            <div id="game-score" class="text-xl text-white">
+              Player 1: 0 - Player 2: 0
+            </div>
+            <button id="leave-game" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+              Back to Menu
+            </button>
+          </div>
+        </div>
+
+        <div class="flex-1 flex flex-col items-center justify-center p-4">
+          <canvas id="game-canvas" class="w-full h-full max-w-none max-h-none bg-black rounded-lg shadow-2xl"></canvas>
+          <div class="absolute bottom-4 text-center text-gray-300 bg-black bg-opacity-50 px-4 py-2 rounded">
+            <div class="text-sm">
+              <p><strong>Controls:</strong></p>
+              <p>Player 1 (Left): W/S to move paddle</p>
+              <p>Player 2 (Right): ↑/↓ to move paddle</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = document.getElementById('game-canvas') as unknown as HTMLCanvasElement;
+
+    const resizeCanvas = () => {
+      const container = canvas.parentElement!;
+      const containerRect = container.getBoundingClientRect();
+
+      const availableWidth = containerRect.width - 32;
+      const availableHeight = containerRect.height - 32;
+
+      const aspectRatio = 2;
+      let canvasWidth = availableWidth;
+      let canvasHeight = canvasWidth / aspectRatio;
+
+      if (canvasHeight > availableHeight) {
+        canvasHeight = availableHeight;
+        canvasWidth = canvasHeight * aspectRatio;
+      }
+
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+    };
+
+    resizeCanvas();
+    this.resizeHandler = resizeCanvas;
+    window.addEventListener('resize', this.resizeHandler);
+
+    this.currentLocalPongGame = new LocalPongGame(
+      canvas,
+      () => this.endLocalGame()
+    );
+
+    this.currentLocalPongGame.init();
+
+    document.getElementById('leave-game')!.addEventListener('click', () => {
+      this.endLocalGame();
+    });
+  }
+
+  private startLocalTank(): void {
+    this.container.innerHTML = `
+      <div class="fixed inset-0 bg-gray-900 flex flex-col">
+        <div class="bg-gray-800 p-4 shadow-lg">
+          <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-white">Local Tank Battle - 2 Players</h1>
+            <div id="game-score" class="text-xl text-white">
+              Player 1: 3 lives - Player 2: 3 lives
+            </div>
+            <button id="leave-game" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+              Back to Menu
+            </button>
+          </div>
+        </div>
+
+        <div class="flex-1 flex flex-col items-center justify-center p-4">
+          <canvas id="game-canvas" class="w-full h-full max-w-none max-h-none bg-black rounded-lg shadow-2xl"></canvas>
+          <div class="absolute bottom-4 text-center text-gray-300 bg-black bg-opacity-50 px-4 py-2 rounded">
+            <div class="text-sm">
+              <p><strong>Tank Controls:</strong></p>
+              <p>Player 1: W/A/S/D (Move), Q/E (Turret), Shift (Fire)</p>
+              <p>Player 2: ↑/←/↓/→ (Move), [/] (Turret), Enter (Fire)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = document.getElementById('game-canvas') as unknown as HTMLCanvasElement;
+
+    const resizeCanvas = () => {
+      const container = canvas.parentElement!;
+      const containerRect = container.getBoundingClientRect();
+
+      const availableWidth = containerRect.width - 32;
+      const availableHeight = containerRect.height - 32;
+
+      const aspectRatio = 1.5;
+      let canvasWidth = availableWidth;
+      let canvasHeight = canvasWidth / aspectRatio;
+
+      if (canvasHeight > availableHeight) {
+        canvasHeight = availableHeight;
+        canvasWidth = canvasHeight * aspectRatio;
+      }
+
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+    };
+
+    resizeCanvas();
+    this.resizeHandler = resizeCanvas;
+    window.addEventListener('resize', this.resizeHandler);
+
+    this.currentLocalTankGame = new LocalTankGame(
+      canvas,
+      () => this.endLocalGame()
+    );
+
+    this.currentLocalTankGame.init();
+
+    document.getElementById('leave-game')!.addEventListener('click', () => {
+      this.endLocalGame();
+    });
+  }
+
+  private endLocalGame(): void {
+    if (this.currentLocalPongGame) {
+      this.currentLocalPongGame.dispose();
+      this.currentLocalPongGame = null;
+    }
+
+    if (this.currentLocalTankGame) {
+      this.currentLocalTankGame.dispose();
+      this.currentLocalTankGame = null;
+    }
+
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      this.resizeHandler = null;
+    }
+
     this.router.navigate({ name: 'userlist' });
   }
 }

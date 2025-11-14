@@ -7,38 +7,38 @@ echo "============================================"
 echo ""
 
 # Check if certificate exists
-if [ ! -f ./certs/server.crt ]; then
-  echo "❌ Error: Certificate not found at ./certs/server.crt"
+if [ ! -f ./backend/certs/server.crt ]; then
+  echo "❌ Error: Certificate not found at ./backend/certs/server.crt"
   echo ""
   echo "Please run ./setup.sh to generate certificates first."
   exit 1
 fi
 
-echo "📄 Certificate found: ./certs/server.crt"
+echo "📄 Certificate found: ./backend/certs/server.crt"
 echo ""
 
 echo "============================================"
 echo "🔐 Certificate Details"
 echo "============================================"
-openssl x509 -in ./certs/server.crt -noout -text | grep -A 2 "Subject:"
+openssl x509 -in ./backend/certs/server.crt -noout -text | grep -A 2 "Subject:"
 echo ""
 
 echo "============================================"
 echo "📅 Validity Period"
 echo "============================================"
-openssl x509 -in ./certs/server.crt -noout -dates
+openssl x509 -in ./backend/certs/server.crt -noout -dates
 echo ""
 
 echo "============================================"
 echo "🔑 Key Algorithm and Size"
 echo "============================================"
-openssl x509 -in ./certs/server.crt -noout -text | grep "Public Key Algorithm" -A 1
+openssl x509 -in ./backend/certs/server.crt -noout -text | grep "Public Key Algorithm" -A 1
 echo ""
 
 echo "============================================"
 echo "🔒 Signature Algorithm"
 echo "============================================"
-openssl x509 -in ./certs/server.crt -noout -text | grep "Signature Algorithm" | head -1
+openssl x509 -in ./backend/certs/server.crt -noout -text | grep "Signature Algorithm" | head -1
 echo ""
 
 echo "============================================"
@@ -47,36 +47,36 @@ echo "============================================"
 echo ""
 
 # Check for SubjectAltName
-if openssl x509 -in ./certs/server.crt -noout -text | grep -q "Subject Alternative Name"; then
+if openssl x509 -in ./backend/certs/server.crt -noout -text | grep -q "Subject Alternative Name"; then
   echo "✅ SubjectAltName (SAN) is present"
-  openssl x509 -in ./certs/server.crt -noout -text | grep -A 1 "Subject Alternative Name"
+  openssl x509 -in ./backend/certs/server.crt -noout -text | grep -A 1 "Subject Alternative Name"
 else
   echo "❌ SubjectAltName (SAN) is MISSING - Firefox will reject this certificate!"
 fi
 echo ""
 
 # Check for Key Usage
-if openssl x509 -in ./certs/server.crt -noout -text | grep -q "Key Usage"; then
+if openssl x509 -in ./backend/certs/server.crt -noout -text | grep -q "Key Usage"; then
   echo "✅ Key Usage extension is present"
-  openssl x509 -in ./certs/server.crt -noout -text | grep -A 1 "X509v3 Key Usage"
+  openssl x509 -in ./backend/certs/server.crt -noout -text | grep -A 1 "X509v3 Key Usage"
 else
   echo "⚠️  Key Usage extension is missing"
 fi
 echo ""
 
 # Check for Extended Key Usage
-if openssl x509 -in ./certs/server.crt -noout -text | grep -q "Extended Key Usage"; then
+if openssl x509 -in ./backend/certs/server.crt -noout -text | grep -q "Extended Key Usage"; then
   echo "✅ Extended Key Usage is present"
-  openssl x509 -in ./certs/server.crt -noout -text | grep -A 1 "X509v3 Extended Key Usage"
+  openssl x509 -in ./backend/certs/server.crt -noout -text | grep -A 1 "X509v3 Extended Key Usage"
 else
   echo "⚠️  Extended Key Usage is missing"
 fi
 echo ""
 
 # Check signature algorithm
-if openssl x509 -in ./certs/server.crt -noout -text | grep "Signature Algorithm" | grep -q "sha256"; then
+if openssl x509 -in ./backend/certs/server.crt -noout -text | grep "Signature Algorithm" | grep -q "sha256"; then
   echo "✅ Using SHA-256 (secure)"
-elif openssl x509 -in ./certs/server.crt -noout -text | grep "Signature Algorithm" | grep -q "sha1"; then
+elif openssl x509 -in ./backend/certs/server.crt -noout -text | grep "Signature Algorithm" | grep -q "sha1"; then
   echo "❌ Using SHA-1 (deprecated, Firefox may reject)"
 else
   echo "⚠️  Unknown signature algorithm"
@@ -84,7 +84,7 @@ fi
 echo ""
 
 # Check key size
-KEY_SIZE=$(openssl x509 -in ./certs/server.crt -noout -text | grep "Public-Key:" | sed 's/[^0-9]*//g')
+KEY_SIZE=$(openssl x509 -in ./backend/certs/server.crt -noout -text | grep "Public-Key:" | sed 's/[^0-9]*//g')
 if [ "$KEY_SIZE" -ge 2048 ]; then
   echo "✅ Key size: ${KEY_SIZE} bits (sufficient)"
 else
@@ -101,10 +101,10 @@ echo ""
 CHECKS_PASSED=0
 CHECKS_TOTAL=5
 
-openssl x509 -in ./certs/server.crt -noout -text | grep -q "Subject Alternative Name" && CHECKS_PASSED=$((CHECKS_PASSED + 1))
-openssl x509 -in ./certs/server.crt -noout -text | grep -q "Key Usage" && CHECKS_PASSED=$((CHECKS_PASSED + 1))
-openssl x509 -in ./certs/server.crt -noout -text | grep -q "Extended Key Usage" && CHECKS_PASSED=$((CHECKS_PASSED + 1))
-openssl x509 -in ./certs/server.crt -noout -text | grep "Signature Algorithm" | grep -q "sha256" && CHECKS_PASSED=$((CHECKS_PASSED + 1))
+openssl x509 -in ./backend/certs/server.crt -noout -text | grep -q "Subject Alternative Name" && CHECKS_PASSED=$((CHECKS_PASSED + 1))
+openssl x509 -in ./backend/certs/server.crt -noout -text | grep -q "Key Usage" && CHECKS_PASSED=$((CHECKS_PASSED + 1))
+openssl x509 -in ./backend/certs/server.crt -noout -text | grep -q "Extended Key Usage" && CHECKS_PASSED=$((CHECKS_PASSED + 1))
+openssl x509 -in ./backend/certs/server.crt -noout -text | grep "Signature Algorithm" | grep -q "sha256" && CHECKS_PASSED=$((CHECKS_PASSED + 1))
 [ "$KEY_SIZE" -ge 2048 ] && CHECKS_PASSED=$((CHECKS_PASSED + 1))
 
 echo "Checks passed: ${CHECKS_PASSED}/${CHECKS_TOTAL}"

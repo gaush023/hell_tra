@@ -45,7 +45,8 @@ echo ""
 
 # Certificates
 echo "Certificates:"
-echo "  certs/:          $(check_exists certs) ($(get_size certs))"
+echo "  backend/certs/:  $(check_exists backend/certs) ($(get_size backend/certs))"
+echo "  frontend/certs/: $(check_exists frontend/certs) ($(get_size frontend/certs))"
 echo ""
 
 # Environment files
@@ -187,7 +188,8 @@ case $choice in
   4)
     # Certificates
     echo "🔒 Cleaning certificates..."
-    remove_item "certs" "SSL certificates"
+    remove_item "backend/certs" "backend SSL certificates"
+    remove_item "frontend/certs" "frontend SSL certificates"
     ;;
 
   5)
@@ -208,7 +210,8 @@ case $choice in
     remove_item "backend/dist" "backend build output"
     remove_item "backend/database.db" "database"
     remove_item "backend/uploads/avatars" "user avatars"
-    remove_item "certs" "SSL certificates"
+    remove_item "backend/certs" "backend SSL certificates"
+    remove_item "frontend/certs" "frontend SSL certificates"
     mkdir -p backend/uploads/avatars
     ;;
 
@@ -223,7 +226,8 @@ case $choice in
     remove_item "backend/dist" "backend build output"
     remove_item "backend/database.db" "database"
     remove_item "backend/uploads" "uploads directory"
-    remove_item "certs" "SSL certificates"
+    remove_item "backend/certs" "backend SSL certificates"
+    remove_item "frontend/certs" "frontend SSL certificates"
     remove_item "backend/.env" "backend environment file"
     remove_item "frontend/.env" "frontend environment file"
     mkdir -p backend/uploads/avatars
@@ -256,7 +260,10 @@ case $choice in
     fi
 
     read -p "Clean certificates? (y/N): " -n 1 -r; echo
-    [[ $REPLY =~ ^[Yy]$ ]] && remove_item "certs" "SSL certificates"
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      remove_item "backend/certs" "backend SSL certificates"
+      remove_item "frontend/certs" "frontend SSL certificates"
+    fi
 
     read -p "Clean .env files? (y/N): " -n 1 -r; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -290,7 +297,7 @@ if [ $CLEANED -gt 0 ]; then
     NEEDS_SETUP=true
   fi
 
-  if [ ! -d "certs" ]; then
+  if [ ! -d "backend/certs" ] || [ ! -d "frontend/certs" ]; then
     echo "  🔒 Regenerate certificates:"
     echo "     ./setup.sh"
     echo ""

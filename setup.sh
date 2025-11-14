@@ -42,12 +42,13 @@ echo ""
 # ====================================
 echo "🔒 Step 2: Setting up HTTPS certificates..."
 
-# Create certs directory
-mkdir -p ./certs
+# Create certs directories for backend and frontend
+mkdir -p ./backend/certs
+mkdir -p ./frontend/certs
 
-# Check if certificates already exist
-if [ -f ./certs/server.key ] && [ -f ./certs/server.crt ]; then
-  echo "  ℹ️  Certificates already exist in ./certs/"
+# Check if certificates already exist (check backend location)
+if [ -f ./backend/certs/server.key ] && [ -f ./backend/certs/server.crt ]; then
+  echo "  ℹ️  Certificates already exist in ./backend/certs/ and ./frontend/certs/"
 
   # Ask if user wants to regenerate
   read -p "  Do you want to regenerate certificates? (y/N): " -n 1 -r
@@ -69,22 +70,27 @@ if [ -z "$SKIP_CERT" ]; then
       mkcert -install
     fi
 
-    # Generate certificates
-    cd ./certs
+    # Generate certificates for backend
+    cd ./backend/certs
     mkcert localhost 127.0.0.1 ::1
     mv localhost+2.pem server.crt
     mv localhost+2-key.pem server.key
-    cd ..
+    cd ../..
 
-    # Create PEM format
-    cat ./certs/server.crt ./certs/server.key > ./certs/server.pem
+    # Create PEM format for backend
+    cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
+
+    # Copy certificates to frontend
+    cp ./backend/certs/server.crt ./frontend/certs/server.crt
+    cp ./backend/certs/server.key ./frontend/certs/server.key
+    cp ./backend/certs/server.pem ./frontend/certs/server.pem
 
     echo "  ✅ Certificates generated with mkcert"
   else
     echo "  ℹ️  mkcert not found, using openssl (self-signed certificates)..."
 
     # Create OpenSSL config for Firefox compatibility
-    cat > ./certs/openssl.cnf << 'EOF'
+    cat > ./backend/certs/openssl.cnf << 'EOF'
 [req]
 default_bits = 2048
 prompt = no
@@ -112,21 +118,26 @@ IP.1 = 127.0.0.1
 IP.2 = ::1
 EOF
 
-    # Generate private key
-    openssl genrsa -out ./certs/server.key 2048
+    # Generate private key for backend
+    openssl genrsa -out ./backend/certs/server.key 2048
 
     # Generate self-signed certificate with proper extensions for Firefox
     openssl req -new -x509 -sha256 -days 365 \
-      -key ./certs/server.key \
-      -out ./certs/server.crt \
-      -config ./certs/openssl.cnf \
+      -key ./backend/certs/server.key \
+      -out ./backend/certs/server.crt \
+      -config ./backend/certs/openssl.cnf \
       -extensions v3_req
 
-    # Create PEM format
-    cat ./certs/server.crt ./certs/server.key > ./certs/server.pem
+    # Create PEM format for backend
+    cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
+
+    # Copy certificates to frontend
+    cp ./backend/certs/server.crt ./frontend/certs/server.crt
+    cp ./backend/certs/server.key ./frontend/certs/server.key
+    cp ./backend/certs/server.pem ./frontend/certs/server.pem
 
     # Clean up config file
-    rm ./certs/openssl.cnf
+    rm ./backend/certs/openssl.cnf
 
     echo "  ✅ Self-signed certificates generated with openssl"
     echo ""
@@ -144,25 +155,30 @@ EOF
     echo "    Windows: choco install mkcert"
   fi
 
-  # Set proper permissions
-  chmod 600 ./certs/server.key
-  chmod 644 ./certs/server.crt
-  chmod 600 ./certs/server.pem
+  # Set proper permissions for backend certificates
+  chmod 600 ./backend/certs/server.key
+  chmod 644 ./backend/certs/server.crt
+  chmod 600 ./backend/certs/server.pem
+
+  # Set proper permissions for frontend certificates
+  chmod 600 ./frontend/certs/server.key
+  chmod 644 ./frontend/certs/server.crt
+  chmod 600 ./frontend/certs/server.pem
 
   echo "  ✅ Certificate permissions set"
 fi
 
 # Update backend/.env to enable HTTPS and set certificate paths
-# Note: Paths are relative to backend directory, so we need ../certs from backend/
+# Note: Paths are relative to backend directory, so we use certs/ (in the same directory)
 if [[ "$OSTYPE" == "darwin"* ]]; then
   sed -i '' 's|^HTTPS_ENABLED=.*|HTTPS_ENABLED=true|' backend/.env
-  sed -i '' 's|^SSL_KEY_PATH=.*|SSL_KEY_PATH=../certs/server.key|' backend/.env
-  sed -i '' 's|^SSL_CERT_PATH=.*|SSL_CERT_PATH=../certs/server.crt|' backend/.env
+  sed -i '' 's|^SSL_KEY_PATH=.*|SSL_KEY_PATH=certs/server.key|' backend/.env
+  sed -i '' 's|^SSL_CERT_PATH=.*|SSL_CERT_PATH=certs/server.crt|' backend/.env
   sed -i '' 's|^FRONTEND_URL=.*|FRONTEND_URL=https://localhost:5173|' backend/.env
 else
   sed -i 's|^HTTPS_ENABLED=.*|HTTPS_ENABLED=true|' backend/.env
-  sed -i 's|^SSL_KEY_PATH=.*|SSL_KEY_PATH=../certs/server.key|' backend/.env
-  sed -i 's|^SSL_CERT_PATH=.*|SSL_CERT_PATH=../certs/server.crt|' backend/.env
+  sed -i 's|^SSL_KEY_PATH=.*|SSL_KEY_PATH=certs/server.key|' backend/.env
+  sed -i 's|^SSL_CERT_PATH=.*|SSL_CERT_PATH=certs/server.crt|' backend/.env
   sed -i 's|^FRONTEND_URL=.*|FRONTEND_URL=https://localhost:5173|' backend/.env
 fi
 

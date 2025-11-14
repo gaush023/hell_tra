@@ -147,40 +147,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Get user by ID
-  fastify.get('/users/:id', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string };
-      const user = userService.getUserById(id);
-
-      if (!user) {
-        return reply.code(404).send({ error: 'User not found' });
-      }
-
-      const { password, ...userWithoutPassword } = user;
-      reply.send(userWithoutPassword);
-    } catch (error) {
-      reply.code(500).send({ error: 'Internal server error' });
-    }
-  });
-
-  // Basic stats endpoint
-  fastify.get('/users/:id/stats', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string };
-      const user = userService.getUserById(id);
-
-      if (!user) {
-        return reply.code(404).send({ error: 'User not found' });
-      }
-
-      reply.send(user.stats);
-    } catch (error) {
-      reply.code(500).send({ error: 'Internal server error' });
-    }
-  });
-
-  // Placeholder endpoints for frontend compatibility
+  // Get friends
   fastify.get('/users/friends', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const userId = request.user!.id;
@@ -192,6 +159,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Get friend requests
   fastify.get('/users/friend-requests', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const userId = request.user!.id;
@@ -203,6 +171,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Send friend request (original endpoint)
   fastify.post('/users/friend-request', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const { userId } = request.body as { userId?: string };
@@ -246,6 +215,51 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Alias endpoint for friend request (for integration tests compatibility)
+  fastify.post('/users/friends/request', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
+    try {
+      const { userId } = request.body as { userId?: string };
+
+      if (!userId) {
+        return reply.code(400).send({ error: 'User ID is required' });
+      }
+
+      const currentUserId = request.user!.id;
+
+      // Check if target user exists
+      const targetUser = userService.getUserById(userId);
+      if (!targetUser) {
+        return reply.code(404).send({ error: 'User not found' });
+      }
+
+      // Check if trying to add self
+      if (userId === currentUserId) {
+        return reply.code(400).send({ error: 'Cannot send friend request to yourself' });
+      }
+
+      // Create and store the friend request
+      const friendRequest = userService.createFriendRequest(currentUserId, userId);
+      reply.send(friendRequest);
+    } catch (error) {
+      console.error('Send friend request error:', error);
+      const errorMessage = (error as Error).message || 'Unknown error';
+
+      // Return appropriate status codes based on error type
+      if (errorMessage.includes('Sender user not found')) {
+        return reply.code(401).send({ error: 'Your session is invalid. Please log out and log in again.' });
+      } else if (errorMessage.includes('Recipient user not found')) {
+        return reply.code(404).send({ error: 'User not found' });
+      } else if (errorMessage.includes('not found')) {
+        return reply.code(404).send({ error: errorMessage });
+      } else if (errorMessage.includes('already exists') || errorMessage.includes('already friends')) {
+        return reply.code(400).send({ error: errorMessage });
+      } else {
+        return reply.code(500).send({ error: `Internal server error: ${errorMessage}` });
+      }
+    }
+  });
+
+  // Respond to friend request
   fastify.post('/users/friend-request/:id/respond', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const { id: requestId } = request.params as { id: string };
@@ -265,10 +279,12 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Delete friend
   fastify.delete('/users/friends/:id', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     reply.send({ message: 'Friend system not implemented in simplified version' });
   });
 
+  // Search users
   fastify.get('/users/search', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const { q } = request.query as { q?: string };
@@ -299,17 +315,13 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.get('/users/:id/matches', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
+  // Current user's match history endpoint (for integration tests compatibility)
+  fastify.get('/users/match-history', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
-      const { id } = request.params as { id: string };
+      const userId = request.user!.id;
       const { limit = 20, offset = 0 } = request.query as { limit?: number; offset?: number };
 
-      const user = userService.getUserById(id);
-      if (!user) {
-        return reply.code(404).send({ error: 'User not found' });
-      }
-
-      const matches = userService.getMatchHistory(id, Number(limit), Number(offset));
+      const matches = userService.getMatchHistory(userId, Number(limit), Number(offset));
       reply.send(matches);
     } catch (error) {
       console.error('Get match history error:', error);
@@ -317,6 +329,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Get leaderboard (must come before /users/:id to avoid route conflicts)
   fastify.get('/leaderboard', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const { gameType, limit = 10 } = request.query as { gameType?: 'pong' | 'tank'; limit?: number };
@@ -335,6 +348,58 @@ export async function userRoutes(fastify: FastifyInstance) {
       reply.send(sanitizedLeaderboard);
     } catch (error) {
       console.error('Get leaderboard error:', error);
+      reply.code(500).send({ error: 'Internal server error' });
+    }
+  });
+
+  // Get user's matches by ID
+  fastify.get('/users/:id/matches', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const { limit = 20, offset = 0 } = request.query as { limit?: number; offset?: number };
+
+      const user = userService.getUserById(id);
+      if (!user) {
+        return reply.code(404).send({ error: 'User not found' });
+      }
+
+      const matches = userService.getMatchHistory(id, Number(limit), Number(offset));
+      reply.send(matches);
+    } catch (error) {
+      console.error('Get match history error:', error);
+      reply.code(500).send({ error: 'Internal server error' });
+    }
+  });
+
+  // Get user stats by ID
+  fastify.get('/users/:id/stats', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const user = userService.getUserById(id);
+
+      if (!user) {
+        return reply.code(404).send({ error: 'User not found' });
+      }
+
+      reply.send(user.stats);
+    } catch (error) {
+      reply.code(500).send({ error: 'Internal server error' });
+    }
+  });
+
+  // Get user by ID (MUST BE LAST - most generic route)
+  fastify.get('/users/:id', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const user = userService.getUserById(id);
+
+      if (!user) {
+        return reply.code(404).send({ error: 'User not found' });
+      }
+
+      const { password, ...userWithoutPassword } = user;
+      reply.send(userWithoutPassword);
+    } catch (error) {
       reply.code(500).send({ error: 'Internal server error' });
     }
   });

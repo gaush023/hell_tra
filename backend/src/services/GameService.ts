@@ -117,7 +117,6 @@ export class GameService {
 
     // Track Pong game metrics
     this.metricsService.pongGamesTotal.inc({ status: 'started' });
-    this.metricsService.pongGamesActive.inc();
 
     return true;
   }
@@ -158,7 +157,6 @@ export class GameService {
 
     // Track Pong game metrics
     this.metricsService.pongGamesTotal.inc({ status: 'finished' });
-    this.metricsService.pongGamesActive.dec();
 
     return true;
   }
@@ -402,6 +400,13 @@ export class GameService {
       this.gameIntervals.delete(gameId);
     }
     this.games.delete(gameId);
+  }
+
+  /**
+   * Get the count of currently active (playing) games
+   */
+  getActiveGamesCount(): number {
+    return Array.from(this.games.values()).filter(game => game.status === 'playing').length;
   }
 
   // 4人対戦のマッチメイキング

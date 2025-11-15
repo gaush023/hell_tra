@@ -43,9 +43,9 @@ export async function userRoutes(fastify: FastifyInstance) {
   fastify.put('/users/profile', { preHandler: authenticate }, async (request: any, reply: FastifyReply) => {
     try {
       const userId = request.user!.id;
-      const { displayName, bio } = request.body as { displayName?: string; bio?: string };
+      const { displayName, bio, email, avatar } = request.body as { displayName?: string; bio?: string; email?: string; avatar?: string | null };
 
-      const updateResult = userService.updateUserProfile(userId, { displayName, bio });
+      const updateResult = userService.updateUserProfile(userId, { displayName, bio, email, avatar });
 
       if (updateResult) {
         const updatedUser = userService.getUserById(userId);

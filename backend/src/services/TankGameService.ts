@@ -176,7 +176,6 @@ export class TankGameService {
 
     // Track Tank game metrics
     this.metricsService.tankGamesTotal.inc({ status: 'started' });
-    this.metricsService.tankGamesActive.inc();
 
     return true;
   }
@@ -370,7 +369,6 @@ export class TankGameService {
 
     // Track Tank game metrics
     this.metricsService.tankGamesTotal.inc({ status: 'finished' });
-    this.metricsService.tankGamesActive.dec();
 
     return true;
   }
@@ -397,6 +395,13 @@ export class TankGameService {
       this.gameIntervals.delete(gameId);
     }
     this.games.delete(gameId);
+  }
+
+  /**
+   * Get the count of currently active (playing) games
+   */
+  getActiveGamesCount(): number {
+    return Array.from(this.games.values()).filter(game => game.status === 'playing').length;
   }
 
   // 招待システム

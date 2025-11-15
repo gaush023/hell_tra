@@ -7,11 +7,11 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test:grafana": "tsx scripts/test-grafana.ts",
-    "test:load": "tsx scripts/simple-load-test.ts",
-    "test:metrics": "tsx scripts/test-full-metrics.ts",
-    "test:games": "tsx scripts/test-with-games.ts",
-    "test:complete": "tsx scripts/complete-test.ts"
+    "test:grafana": "tsx ../evaluation-tests/devops/test-grafana.ts",
+    "test:load": "tsx ../evaluation-tests/devops/simple-load-test.ts",
+    "test:metrics": "tsx ../evaluation-tests/devops/test-full-metrics.ts",
+    "test:games": "tsx ../evaluation-tests/devops/test-with-games.ts",
+    "test:complete": "tsx ../evaluation-tests/devops/complete-test.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^7.6.0",

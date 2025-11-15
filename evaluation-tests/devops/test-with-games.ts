@@ -7,12 +7,18 @@
  */
 
 import axios from 'axios';
+import https from 'https';
 import WebSocket from 'ws';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3002';
-const WS_URL = process.env.WS_URL || 'ws://localhost:3002';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://localhost:3002';
+const WS_URL = process.env.WS_URL || 'wss://localhost:3002';
 const TEST_DURATION = parseInt(process.env.TEST_DURATION || '120') * 1000;
 const CONCURRENT_USERS = parseInt(process.env.CONCURRENT_USERS || '6');
+
+// HTTPS agent to ignore self-signed certificate errors
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 
 interface TestUser {
   username: string;
@@ -61,7 +67,7 @@ class CompleteMetricsGenerator {
       const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
         username,
         password,
-      }, { validateStatus: () => true });
+      }, { validateStatus: () => true, httpsAgent });
 
       this.stats.httpRequests++;
 
@@ -83,7 +89,7 @@ class CompleteMetricsGenerator {
       const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
         username: user.username,
         password: user.password,
-      }, { validateStatus: () => true });
+      }, { validateStatus: () => true, httpsAgent });
 
       this.stats.httpRequests++;
 
@@ -108,7 +114,7 @@ class CompleteMetricsGenerator {
       }
 
       const wsUrl = `${WS_URL}/ws?token=${user.token}`;
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(wsUrl, { rejectUnauthorized: false });
 
       const timeout = setTimeout(() => {
         ws.close();
@@ -237,6 +243,7 @@ class CompleteMetricsGenerator {
       await axios.get(`${BACKEND_URL}${endpoint}`, {
         validateStatus: () => true,
         timeout: 3000,
+        httpsAgent,
       });
       this.stats.httpRequests++;
     } catch (error) {
@@ -258,7 +265,7 @@ class CompleteMetricsGenerator {
 
   async displayMetrics(): Promise<void> {
     try {
-      const response = await axios.get(`${BACKEND_URL}/metrics`);
+      const response = await axios.get(`${BACKEND_URL}/metrics`, { httpsAgent });
       const metrics = response.data;
       const lines = metrics.split('\n');
 

@@ -7,10 +7,16 @@
  */
 
 import axios from 'axios';
+import https from 'https';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3002';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://localhost:3002';
 const TEST_DURATION = parseInt(process.env.TEST_DURATION || '60') * 1000;
 const REQUESTS_PER_SECOND = parseInt(process.env.RPS || '10');
+
+// HTTPS agent to ignore self-signed certificate errors
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 
 interface Stats {
   totalRequests: number;
@@ -57,6 +63,7 @@ class SimpleLoadTester {
       const response = await axios.get(`${BACKEND_URL}${endpoint.path}`, {
         validateStatus: () => true, // すべてのステータスコードを受け入れる
         timeout: 5000,
+        httpsAgent,
       });
 
       if (response.status < 400) {
@@ -74,7 +81,7 @@ class SimpleLoadTester {
    */
   async displayMetrics(): Promise<void> {
     try {
-      const response = await axios.get(`${BACKEND_URL}/metrics`);
+      const response = await axios.get(`${BACKEND_URL}/metrics`, { httpsAgent });
       const metrics = response.data;
       const lines = metrics.split('\n');
 

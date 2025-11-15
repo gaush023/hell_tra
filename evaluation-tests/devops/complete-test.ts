@@ -8,11 +8,17 @@
 
 import axios from 'axios';
 import WebSocket from 'ws';
+import https from 'https';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3002';
-const WS_URL = process.env.WS_URL || 'ws://localhost:3002';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://localhost:3002';
+const WS_URL = process.env.WS_URL || 'wss://localhost:3002';
 const TEST_DURATION = parseInt(process.env.TEST_DURATION || '120') * 1000;
 const CONCURRENT_USERS = parseInt(process.env.CONCURRENT_USERS || '5');
+
+// HTTPS agent to ignore self-signed certificate errors
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 
 interface TestUser {
   username: string;
@@ -44,13 +50,13 @@ class CompleteGrafanaTest {
       await axios.post(`${BACKEND_URL}/api/auth/register`, {
         username,
         password,
-      }, { validateStatus: () => true });
+      }, { validateStatus: () => true, httpsAgent });
 
       // Login
       const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
         username,
         password,
-      }, { validateStatus: () => true });
+      }, { validateStatus: () => true, httpsAgent });
 
       if (response.status === 200 && response.data.token) {
         console.log(`✅ ユーザー作成&ログイン: ${username}`);
@@ -74,7 +80,9 @@ class CompleteGrafanaTest {
         return;
       }
 
-      const ws = new WebSocket(`${WS_URL}/ws?token=${user.token}`);
+      const ws = new WebSocket(`${WS_URL}/ws?token=${user.token}`, {
+        rejectUnauthorized: false
+      });
 
       const timeout = setTimeout(() => {
         ws.close();
@@ -122,6 +130,7 @@ class CompleteGrafanaTest {
         axios.get(`${BACKEND_URL}${endpoint}`, {
           validateStatus: () => true,
           timeout: 3000,
+          httpsAgent
         }).then(() => {
           this.httpRequests++;
         }).catch(() => {})
@@ -139,7 +148,7 @@ class CompleteGrafanaTest {
       await axios.post(
         `${BACKEND_URL}/api/test/simulate-games`,
         { pongGames, tankGames },
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: { 'Content-Type': 'application/json' }, httpsAgent }
       );
 
       this.gamesSimulated += pongGames + tankGames;
@@ -151,7 +160,7 @@ class CompleteGrafanaTest {
 
   async showMetrics(): Promise<void> {
     try {
-      const response = await axios.get(`${BACKEND_URL}/metrics`);
+      const response = await axios.get(`${BACKEND_URL}/metrics`, { httpsAgent });
       const metrics = response.data;
       const lines = metrics.split('\n');
 

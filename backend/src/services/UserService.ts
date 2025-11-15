@@ -546,7 +546,7 @@ export class UserService {
   }
 
   // Update user profile
-  updateUserProfile(userId: string, updates: { displayName?: string; bio?: string }): boolean {
+  updateUserProfile(userId: string, updates: { displayName?: string; bio?: string; email?: string; avatar?: string | null }): boolean {
     try {
       const user = this.getUserById(userId);
       if (!user) return false;
@@ -556,20 +556,32 @@ export class UserService {
 
       if (updates.displayName !== undefined) {
         setClause.push('display_name = ?');
-        values.push(sanitizeInput(updates.displayName));
+        const sanitized = sanitizeInput(updates.displayName);
+        values.push(sanitized === '' ? null : sanitized);
       }
       if (updates.bio !== undefined) {
         setClause.push('bio = ?');
-        values.push(sanitizeInput(updates.bio));
+        const sanitized = sanitizeInput(updates.bio);
+        values.push(sanitized === '' ? null : sanitized);
+      }
+      if (updates.email !== undefined) {
+        setClause.push('email = ?');
+        const sanitized = sanitizeInput(updates.email);
+        values.push(sanitized === '' ? null : sanitized);
+      }
+      if (updates.avatar !== undefined) {
+        setClause.push('avatar = ?');
+        values.push(updates.avatar);
       }
 
       if (setClause.length === 0) return true; // No updates needed
 
       values.push(userId);
-      const result = this.db.run(
-        `UPDATE users SET ${setClause.join(', ')} WHERE id = ?`,
-        values
-      );
+      const query = `UPDATE users SET ${setClause.join(', ')} WHERE id = ?`;
+      console.log('Updating user profile:', { query, values, userId });
+
+      const result = this.db.run(query, values);
+      console.log('Update result:', result);
 
       return result.changes > 0;
     } catch (error) {

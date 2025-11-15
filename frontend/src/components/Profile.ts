@@ -17,10 +17,8 @@ export class Profile {
 
   private getAvatarUrl(avatar: string | null | undefined): string {
     if (!avatar) {
-      // Use protocol-aware default avatar URL
-      const protocol = window.location.protocol;
-      const host = 'localhost:3001';
-      return `${protocol}//${host}/api/avatars/default.svg`;
+      // Use default avatar
+      return `${window.location.origin}/api/avatars/default.svg`;
     }
 
     // If avatar already has full URL, return as is
@@ -30,9 +28,7 @@ export class Profile {
 
     // If avatar starts with /api/avatars/, construct full URL
     if (avatar.startsWith('/api/avatars/')) {
-      const protocol = window.location.protocol;
-      const host = 'localhost:3001';
-      return `${protocol}//${host}${avatar}`;
+      return `${window.location.origin}${avatar}`;
     }
 
     // Otherwise, return as is
@@ -179,13 +175,13 @@ export class Profile {
 
       const updates: any = {};
       if (displayName !== (this.currentUser.displayName || '')) {
-        updates.displayName = displayName || undefined;
+        updates.displayName = displayName;
       }
       if (email !== (this.currentUser.email || '')) {
-        updates.email = email || undefined;
+        updates.email = email;
       }
       if (bio !== (this.currentUser.bio || '')) {
-        updates.bio = bio || undefined;
+        updates.bio = bio;
       }
 
       if (Object.keys(updates).length === 0) {
@@ -193,7 +189,9 @@ export class Profile {
         return;
       }
 
+      console.log('Saving profile updates:', updates);
       const updatedUser = await this.apiService.updateProfile(updates);
+      console.log('Profile update response:', updatedUser);
 
       // Update current user object
       Object.assign(this.currentUser, updatedUser);
@@ -240,12 +238,6 @@ export class Profile {
       };
       reader.readAsDataURL(file);
 
-      // Get fresh user data before upload
-      console.log('Getting current user data before upload...');
-      const currentUserData = await this.apiService.getCurrentUser();
-      this.currentUser = currentUserData;
-      localStorage.setItem('user', JSON.stringify(this.currentUser));
-
       // Upload to server
       console.log('Uploading avatar file:', file.name, file.type, file.size);
       const response = await this.apiService.uploadAvatar(file);
@@ -291,7 +283,17 @@ export class Profile {
   }
 
   private showMessage(message: string, type: 'success' | 'error' | 'info'): void {
-    const container = document.getElementById('message-container')!;
+    const container = document.getElementById('message-container');
+
+    if (!container) {
+      console.error('Message container not found, displaying message in console:', message);
+      if (type === 'error') {
+        console.error(message);
+      } else {
+        console.log(message);
+      }
+      return;
+    }
 
     const messageEl = document.createElement('div');
     messageEl.className = `mb-4 p-4 rounded shadow-lg ${
@@ -304,7 +306,9 @@ export class Profile {
 
     // Auto remove after 3 seconds
     setTimeout(() => {
-      container.removeChild(messageEl);
+      if (container.contains(messageEl)) {
+        container.removeChild(messageEl);
+      }
     }, 3000);
   }
 }

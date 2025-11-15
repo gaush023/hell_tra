@@ -18,8 +18,11 @@ scrape_configs:
 
   # Fastify バックエンドのメトリクスを収集
   - job_name: 'fastify-backend'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true  # 自己署名証明書を許可
     static_configs:
-      - targets: ['host.docker.internal:3002']
+      - targets: ['backend:3002']
         labels:
           service: 'transcendence-backend'
           environment: 'development'

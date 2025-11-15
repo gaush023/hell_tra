@@ -146,6 +146,14 @@ fastify.get('/health', async () => {
 
 // Prometheus metrics endpoint
 fastify.get('/metrics', async (request, reply) => {
+  // Update game metrics with actual counts from game services
+  const services = await servicesPromise;
+  const pongActiveCount = services.gameService.getActiveGamesCount();
+  const tankActiveCount = services.tankGameService.getActiveGamesCount();
+
+  metricsService.pongGamesActive.set(pongActiveCount);
+  metricsService.tankGamesActive.set(tankActiveCount);
+
   reply.header('Content-Type', metricsService.getContentType());
   return metricsService.getMetrics();
 });

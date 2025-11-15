@@ -21,9 +21,7 @@ export class Friends {
 
   private getAvatarUrl(avatar: string | null | undefined): string {
     if (!avatar) {
-      const protocol = window.location.protocol;
-      const host = 'localhost:3001';
-      return `${protocol}//${host}/api/avatars/default.svg`;
+      return `${window.location.origin}/api/avatars/default.svg`;
     }
 
     if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
@@ -31,9 +29,7 @@ export class Friends {
     }
 
     if (avatar.startsWith('/api/avatars/')) {
-      const protocol = window.location.protocol;
-      const host = 'localhost:3001';
-      return `${protocol}//${host}${avatar}`;
+      return `${window.location.origin}${avatar}`;
     }
 
     return avatar;

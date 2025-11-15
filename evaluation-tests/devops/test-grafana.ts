@@ -8,12 +8,18 @@
  */
 
 import axios from 'axios';
+import https from 'https';
 import WebSocket from 'ws';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
-const WS_URL = process.env.WS_URL || 'ws://localhost:3001';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://localhost:3002';
+const WS_URL = process.env.WS_URL || 'wss://localhost:3002';
 const TEST_DURATION = parseInt(process.env.TEST_DURATION || '60') * 1000; // デフォルト60秒
 const CONCURRENT_USERS = parseInt(process.env.CONCURRENT_USERS || '5');
+
+// HTTPS agent to ignore self-signed certificate errors
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 
 interface TestStats {
   httpRequests: number;
@@ -58,6 +64,7 @@ class GrafanaTester {
       if (endpoint.method === 'GET') {
         await axios.get(`${BACKEND_URL}${endpoint.path}`, {
           validateStatus: () => true, // すべてのステータスコードを受け入れる
+          httpsAgent,
         });
       }
       this.stats.httpRequests++;
@@ -72,7 +79,7 @@ class GrafanaTester {
    */
   async createWebSocketConnection(userId: number): Promise<void> {
     try {
-      const ws = new WebSocket(WS_URL);
+      const ws = new WebSocket(WS_URL, { rejectUnauthorized: false });
 
       ws.on('open', () => {
         this.stats.wsConnections++;
@@ -125,6 +132,7 @@ class GrafanaTester {
         player2: `test-player-${Math.floor(Math.random() * 1000)}`,
       }, {
         validateStatus: () => true,
+        httpsAgent,
       });
 
       this.stats.gamesStarted++;
@@ -137,6 +145,7 @@ class GrafanaTester {
             winner: Math.random() > 0.5 ? 'player1' : 'player2',
           }, {
             validateStatus: () => true,
+            httpsAgent,
           });
         } catch (error) {
           // エラーは無視
@@ -152,7 +161,7 @@ class GrafanaTester {
    */
   async checkMetrics(): Promise<void> {
     try {
-      const response = await axios.get(`${BACKEND_URL}/metrics`);
+      const response = await axios.get(`${BACKEND_URL}/metrics`, { httpsAgent });
       console.log('\n📈 現在のメトリクス:');
 
       // メトリクスから重要な情報を抽出

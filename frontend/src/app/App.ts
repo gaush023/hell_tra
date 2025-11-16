@@ -1,11 +1,16 @@
 import { LoginForm } from '../components/LoginForm';
 import { UserList } from '../components/UserList';
 import { Tournament } from '../components/Tournament';
+import { Profile } from '../components/Profile';
+import { Friends } from '../components/Friends';
+import { Stats } from '../components/Stats';
+import { MatchHistory } from '../components/MatchHistory';
 import { PongGame } from '../game/PongGame';
 import { TankGame } from '../game/TankGame';
 import { LocalPongGame } from '../game/LocalPongGame';
 import { LocalTankGame } from '../game/LocalTankGame';
 import { WebSocketService } from '../services/WebSocketService';
+import { ApiService } from '../services/ApiService';
 import { User } from '../types/User';
 import { Router, Route } from '../router/Router';
 
@@ -63,6 +68,18 @@ export class App {
       case 'userlist':
         await this.showUserList();
         break;
+      case 'profile':
+        this.showProfile(route.userId);
+        break;
+      case 'friends':
+        this.showFriends();
+        break;
+      case 'stats':
+        await this.showStats(route.userId);
+        break;
+      case 'match-history':
+        this.showMatchHistory(route.userId);
+        break;
       case 'pong-game':
         await this.startGame(route.gameId);
         break;
@@ -106,6 +123,7 @@ export class App {
         this.container,
         this.currentUser!,
         this.wsService,
+        this.router,
         (gameId: string) => this.startGame(gameId),
         (gameId: string) => this.startTankGame(gameId),
         () => this.showTournament(),

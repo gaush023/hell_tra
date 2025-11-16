@@ -6,6 +6,7 @@ import { Friends } from './Friends';
 import { MatchHistory } from './MatchHistory';
 import { Stats } from './Stats';
 import { sanitize } from '../utils/sanitize';
+import { Router } from '../router/Router';
 
 export class UserList {
   private container: HTMLElement;
@@ -21,11 +22,13 @@ export class UserList {
   private onLocalTankStart: () => void;
   private inQueue4Player: boolean = false;
   private inTankQueue4Player: boolean = false;
+  private router: Router;
 
   constructor(
     container: HTMLElement,
     currentUser: User,
     wsService: WebSocketService,
+    router: Router,
     onGameStart: (gameId: string) => void,
     onTankGameStart?: (gameId: string) => void,
     onTournamentStart?: () => void,
@@ -36,6 +39,7 @@ export class UserList {
     this.apiService = new ApiService();
     this.wsService = wsService;
     this.currentUser = currentUser;
+    this.router = router;
     this.onGameStart = onGameStart;
     this.onTankGameStart = onTankGameStart || onGameStart;
     this.onTournamentStart = onTournamentStart || (() => {});
@@ -517,47 +521,18 @@ export class UserList {
   }
 
   private showProfile(): void {
-    const profile = new Profile(this.container, this.currentUser, () => {
-      this.render();
-    });
-    profile.render();
+    this.router.navigate({ name: 'profile' });
   }
 
   private showFriends(): void {
-    const friends = new Friends(this.container, this.currentUser, () => {
-      this.render();
-    });
-    friends.render();
+    this.router.navigate({ name: 'friends' });
   }
 
   private showMatchHistory(): void {
-    const matchHistory = new MatchHistory(this.container, this.currentUser, () => {
-      this.render();
-    });
-    matchHistory.render();
+    this.router.navigate({ name: 'match-history' });
   }
 
   private async showStats(): Promise<void> {
-    try {
-      // Refresh current user data before showing stats
-      console.log('Refreshing user data before showing stats...');
-      const updatedUser = await this.apiService.getCurrentUser();
-      this.currentUser = updatedUser;
-
-      // Update localStorage with fresh user data
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-
-      const stats = new Stats(this.container, this.currentUser, () => {
-        this.render();
-      });
-      await stats.render();
-    } catch (error) {
-      console.error('Failed to refresh user data for stats:', error);
-      // Fallback to showing stats with current user data
-      const stats = new Stats(this.container, this.currentUser, () => {
-        this.render();
-      });
-      await stats.render();
-    }
+    this.router.navigate({ name: 'stats' });
   }
 }

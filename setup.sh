@@ -82,67 +82,17 @@ fi
 echo ""
 
 # ====================================
-# Step 3: HTTPS Certificate Setup (No sudo, no mkcert)
+# Step 3: HTTPS Certificate Setup
 # ====================================
-echo "🔒 Step 3: Generating HTTPS certificates (sudo-free)..."
+echo "🔒 Step 3: Generating HTTPS certificates..."
 
-# Create cert directories
-mkdir -p ./certs
-
-echo "  📜 Generating self-signed certificate with OpenSSL..."
-
-# Create OpenSSL config
-cat > ./backend/certs/openssl.cnf << 'EOF'
-[req]
-default_bits = 2048
-prompt = no
-default_md = sha256
-x509_extensions = v3_req
-distinguished_name = dn
-
-[dn]
-C = JP
-ST = Tokyo
-L = Tokyo
-O = Development
-CN = localhost
-
-[v3_req]
-subjectAltName = @alt_names
-basicConstraints = CA:FALSE
-keyUsage = digitalSignature, keyEncipherment
-extendedKeyUsage = serverAuth
-
-[alt_names]
-DNS.1 = localhost
-DNS.2 = *.localhost
-IP.1 = 127.0.0.1
-IP.2 = ::1
-EOF
-
-# Generate private key
-openssl genrsa -out ./backend/certs/server.key 2048
-
-# Generate certificate
-openssl req -new -x509 -sha256 -days 365 \
-  -key ./backend/certs/server.key \
-  -out ./backend/certs/server.crt \
-  -config ./backend/certs/openssl.cnf \
-  -extensions v3_req
-
-# Combine PEM
-cat ./backend/certs/server.crt ./backend/certs/server.key > ./backend/certs/server.pem
-
-# Copy to root certs directory (for vite.config.ts)
-cp ./backend/certs/server.crt ./certs/server.crt
-cp ./backend/certs/server.key ./certs/server.key
-cp ./backend/certs/server.pem ./certs/server.pem
-
-# Cleanup
-rm ./backend/certs/openssl.cnf
-
-echo "  ✅ Self-signed certificates generated (no sudo required)"
-echo "  ⚠️ Browsers will warn about security — this is normal for self-signed certificates."
+# 証明書生成スクリプトを実行
+if [ -f ./generate-certs.sh ]; then
+  bash ./generate-certs.sh
+else
+  echo "  ❌ Error: generate-certs.sh not found"
+  exit 1
+fi
 
 # ====================================
 # Step 4: Environment Selection
@@ -210,20 +160,55 @@ echo ""
 # ====================================
 echo "🌐 Step 6: Setting up frontend/.env..."
 
-# Create frontend/.env with environment-specific URLs
-cat > frontend/.env << EOF
-# ================================
-# API Configuration
-# ================================
+# Copy from example if .env doesn't exist
+if [ ! -f frontend/.env ]; then
+  cp frontend/.env.example frontend/.env
+  echo "  ✅ Copied frontend/.env.example → frontend/.env"
+else
+  echo "  ℹ️  frontend/.env already exists"
+fi
 
-# Backend API Base URL
-VITE_API_BASE_URL=${BACKEND_URL}/api
+# Update or add API URL
+if grep -q "^VITE_API_BASE_URL=" frontend/.env; then
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s|^VITE_API_BASE_URL=.*|VITE_API_BASE_URL=${BACKEND_URL}/api|" frontend/.env
+  else
+    sed -i "s|^VITE_API_BASE_URL=.*|VITE_API_BASE_URL=${BACKEND_URL}/api|" frontend/.env
+  fi
+else
+  # Uncomment or add the line
+  if grep -q "^# VITE_API_BASE_URL=" frontend/.env; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      sed -i '' "s|^# VITE_API_BASE_URL=.*|VITE_API_BASE_URL=${BACKEND_URL}/api|" frontend/.env
+    else
+      sed -i "s|^# VITE_API_BASE_URL=.*|VITE_API_BASE_URL=${BACKEND_URL}/api|" frontend/.env
+    fi
+  else
+    echo "VITE_API_BASE_URL=${BACKEND_URL}/api" >> frontend/.env
+  fi
+fi
 
-# WebSocket URL
-VITE_WS_URL=wss://localhost:3001/ws
-EOF
+# Update or add WebSocket URL
+if grep -q "^VITE_WS_URL=" frontend/.env; then
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s|^VITE_WS_URL=.*|VITE_WS_URL=wss://localhost:3001/ws|" frontend/.env
+  else
+    sed -i "s|^VITE_WS_URL=.*|VITE_WS_URL=wss://localhost:3001/ws|" frontend/.env
+  fi
+else
+  # Uncomment or add the line
+  if grep -q "^# VITE_WS_URL=" frontend/.env; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      sed -i '' "s|^# VITE_WS_URL=.*|VITE_WS_URL=wss://localhost:3001/ws|" frontend/.env
+    else
+      sed -i "s|^# VITE_WS_URL=.*|VITE_WS_URL=wss://localhost:3001/ws|" frontend/.env
+    fi
+  else
+    echo "VITE_WS_URL=wss://localhost:3001/ws" >> frontend/.env
+  fi
+fi
 
-echo "  ✅ Created frontend/.env"
+echo "  ✅ Updated frontend/.env"
 echo "     API URL: ${BACKEND_URL}/api"
 echo "     WebSocket URL: wss://localhost:3001/ws"
 
@@ -296,15 +281,8 @@ echo "✅ Setup Complete!"
 echo "============================================"
 echo ""
 echo "📁 Generated files:"
-echo "  - certs/server.key           (Root certificate private key)"
-echo "  - certs/server.crt           (Root certificate)"
-echo "  - certs/server.pem           (Root combined PEM)"
-echo "  - backend/certs/server.key   (Backend private key)"
-echo "  - backend/certs/server.crt   (Backend certificate)"
-echo "  - backend/certs/server.pem   (Backend combined PEM)"
-echo "  - frontend/certs/server.key  (Frontend private key)"
-echo "  - frontend/certs/server.crt  (Frontend certificate)"
-echo "  - frontend/certs/server.pem  (Frontend combined PEM)"
+echo "  - backend/certs/*            (Backend SSL certificates)"
+echo "  - frontend/certs/*           (Frontend SSL certificates)"
 echo "  - backend/.env               (Backend configuration with HTTPS_ENABLED=true)"
 echo "  - frontend/.env              (Frontend configuration)"
 echo "  - .env.docker                (Docker deployment configuration)"
@@ -342,15 +320,7 @@ esac
 
 echo ""
 echo "🔒 Certificate Info:"
-if [ "$MKCERT_SUCCESS" = true ]; then
-  echo "  ✅ Using mkcert certificates (trusted, no browser warnings)"
-  echo "  📁 CA Root: $HOME/.mkcert-local"
-else
-  echo "  ⚠️  Using OpenSSL self-signed certificates"
-  echo "  📝 Your browser will show a security warning"
-  echo "  💡 You can safely proceed for development"
-  echo "  💡 Or install mkcert for trusted certificates:"
-  echo "     macOS:   brew install mkcert"
-  echo "     Linux:   apt install mkcert"
-fi
+echo "  ⚠️  Using OpenSSL self-signed certificates"
+echo "  📝 Your browser will show a security warning - this is normal"
+echo "  💡 You can safely proceed for development"
 echo ""

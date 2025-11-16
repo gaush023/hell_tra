@@ -83,7 +83,10 @@ export class Router {
    */
   public init(): void {
     const route = this.urlToRoute(window.location.pathname);
-    this.replace(route);
+    // Use replaceState for the initial load to set up the state
+    const state = { route };
+    window.history.replaceState(state, '', window.location.pathname);
+    this.handleRoute(route);
   }
 
   private handleRoute(route: Route): void {

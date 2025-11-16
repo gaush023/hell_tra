@@ -10,7 +10,11 @@
  * 4. Profile Management
  */
 
+// Load environment variables
+require('dotenv').config();
+
 const https = require('https');
+const http = require('http');
 const WebSocket = require('ws');
 
 const BASE_URL = process.env.BASE_URL || 'https://localhost:3001';
@@ -38,12 +42,15 @@ const results = {
 
 function makeRequest(url, options = {}) {
   return new Promise((resolve) => {
+    const isHttps = url.startsWith('https');
+    const client = isHttps ? https : http;
+
     const defaultOptions = {
       rejectUnauthorized: false,
       ...options
     };
 
-    const req = https.request(url, defaultOptions, (res) => {
+    const req = client.request(url, defaultOptions, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {

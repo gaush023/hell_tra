@@ -12,6 +12,9 @@
  * 6. Environment Variables
  */
 
+// Load environment variables
+require('dotenv').config();
+
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
